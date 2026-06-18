@@ -48,11 +48,30 @@
         .info-value { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 12px; }
         .info-value:last-child { margin-bottom: 0; }
         
-        /* Estados dinámicos */
+        .btn-registro-visita {
+            background: #2980b9;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            text-decoration: none;
+            display: none;
+            margin-top: 15px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .btn-registro-visita:hover { background: #3498db; }
+
+        /* Estados */
         .status-verificando { background: #f1c40f; color: #2c3e50; }
         .status-valido { background: #2ecc71; color: #fff; }
         .status-pendiente { background: #e67e22; color: #fff; }
         .status-invalido { background: #e74c3c; color: #fff; }
+        .status-visita { background: #3498db; color: #fff; }
     </style>
 </head>
 <body>
@@ -62,15 +81,18 @@
     <div id="statusBox" class="status-box status-verificando">🔄 Verificando...</div>
     
     <div class="info-card">
-        <div class="info-label">Propietario / Residente</div>
+        <div id="lblTipoPersona" class="info-label">Propietario / Residente</div>
         <div id="lblNombre" class="info-value">Cargando...</div>
         
-        <div class="info-label">Dirección</div>
+        <div class="info-label">Dirección Destino</div>
         <div id="lblDireccion" class="info-value">Cargando...</div>
         
-        <div class="info-label">Estatus de Cuenta en Vivo</div>
+        <div class="info-label">Estatus en Vivo</div>
         <div id="lblEstatus" class="info-value">Conectando a base de datos...</div>
     </div>
+
+    <!-- Botón dinámico para el guardia -->
+    <a id="btnFormVisita" class="btn-registro-visita" href="#" target="_blank">👉 Abrir Registro de Caseta</a>
 </div>
 
 <script>
@@ -101,13 +123,14 @@
 
     async function procesarEscaneo() {
         const params = new URLSearchParams(window.location.search);
+        const urlTipo = params.get('t') || 'r'; 
         const urlNombre = params.get('n');
         const urlCalle = params.get('c');
         const urlNumero = params.get('num');
         const urlHash = params.get('h');
 
         if (!urlNombre || !urlCalle || !urlNumero || !urlHash) {
-            mostrarResultado('invalido', 'Código Inválido', 'QR incompleto o dañado', 'Faltan parámetros en la URL.');
+            mostrarResultado('invalido', 'Código Inválido', 'QR incompleto', 'Faltan parámetros en la URL.');
             return;
         }
 
@@ -119,9 +142,27 @@
             return;
         }
 
-        document.getElementById('lblNombre').textContent = urlNombre;
         document.getElementById('lblDireccion').textContent = `${urlCalle} #${urlNumero}`;
 
+        // LÓGICA SI ES PASE DE VISITA (CON TU LINK REAL Y EL ID DE NOMBRE DETECTADO)
+        if (urlTipo === 'v') {
+            document.getElementById('lblTipoPersona').textContent = "Nombre del Visitante Invitado";
+            
+            // Calculamos el ID correlativo para la tercera pregunta (nombre del visitante) basándonos en tu patrón de IDs
+            // Tu calle es entry.73630097, tu número es entry.541084417, tu nombre por descarte en el orden del formulario es entry.1541570774
+            const urlFormRelleno = `https://docs.google.com/forms/d/e/1FAIpQLSdGWlhbBsJIR4QzNjuspojf8dManakczm0N9MCOgkOvvoOP9w/viewform?usp=pp_url&entry.73630097=${encodeURIComponent(urlCalle)}&entry.541084417=${encodeURIComponent(urlNumero)}&entry.1541570774=${encodeURIComponent(urlNombre)}`;
+            
+            const btnForm = document.getElementById('btnFormVisita');
+            btnForm.href = urlFormRelleno;
+            btnForm.style.display = 'block';
+
+            mostrarResultado('visita', 'Pase de Visita', urlNombre, 'Pase válido. Presiona el botón azul para tomar fotos e ingresar.');
+            return;
+        }
+
+        // LÓGICA SI ES RESIDENTE
+        document.getElementById('lblTipoPersona').textContent = "Propietario / Residente";
+        
         try {
             const respuesta = await fetch(urlCsv);
             if (!respuesta.ok) throw new Error("Error CSV");
@@ -148,7 +189,7 @@
             const indexActual = mesesOrden.indexOf(MES_ACTUAL);
 
             if (indexInicio === -1 || indexActual === -1) {
-                mostrarResultado('invalido', 'Error BaseDatos', urlNombre, 'Mes de inicio no válido configurado.');
+                mostrarResultado('invalido', 'Error BaseDatos', urlNombre, 'Configuración de meses errónea.');
                 return;
             }
 
@@ -176,7 +217,7 @@
                 if (mesActualPendiente) todos.push(MES_ACTUAL.charAt(0).toUpperCase() + MES_ACTUAL.slice(1));
                 mostrarResultado('invalido', 'ACCESO DENEGADO', urlNombre, `Debe meses: ${todos.join(', ')}`);
             } else if (mesActualPendiente) {
-                mostrarResultado('pendiente', 'ACCESO PENDIENTE', urlNombre, `Falta pagar el mes actual (${MES_ACTUAL.toUpperCase()})`);
+                mostrarResultado('pendiente', 'ACCESO PENDIENTE', urlNombre, `Falta cubrir el mes actual (${MES_ACTUAL.toUpperCase()})`);
             } else {
                 mostrarResultado('valido', 'ACCESO AUTORIZADO', urlNombre, 'Cuenta al corriente. Permitir ingreso.');
             }
