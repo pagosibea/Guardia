@@ -33,9 +33,9 @@
             overflow: hidden;
             border: 2px dashed #718093;
             background: #22272e;
+            display: none; /* Oculto por defecto, solo se usa si no hay datos en la URL */
         }
         
-        /* Ocultar textos innecesarios y botones molestos generados por la librería */
         #reader__dashboard_section_csr, #reader__status_span { display: none !important; }
         #reader button {
             background-color: #3498db; color: white; border: none; padding: 12px;
@@ -55,14 +55,12 @@
         .status-title { font-size: 26px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
         .status-desc { font-size: 16px; line-height: 1.4; margin-bottom: 15px; }
         
-        /* Colores de Pantallas según flujo operativo */
         .bg-verde { background-color: #2ecc71; color: #fff; }
         .bg-naranja { background-color: #e67e22; color: #fff; }
         .bg-rojo { background-color: #e74c3c; color: #fff; }
         .bg-azul { background-color: #3498db; color: #fff; }
         .bg-error { background-color: #7f8c8d; color: #fff; }
 
-        /* Formulario de captura rápida integrado (Cámara en 1 clic) */
         .capture-form {
             background: rgba(255, 255, 255, 0.1);
             padding: 15px;
@@ -78,7 +76,6 @@
         }
         .form-group input[readonly] { background: #dcdde1; color: #2f3640; font-weight: bold; }
 
-        /* Estilo para los inputs nativos de cámara (Saltan directo a capturar) */
         .camera-btn-wrapper {
             position: relative; margin-bottom: 15px; background: #2f3640;
             border: 2px dashed #fff; border-radius: 6px; padding: 12px; text-align: center; cursor: pointer;
@@ -101,7 +98,7 @@
 <body>
 
 <div class="container">
-    <h2>Caseta: Escáner IBEA</h2>
+    <h2>Caseta: Control IBEA</h2>
     
     <div id="reader"></div>
     
@@ -145,64 +142,45 @@
 </div>
 
 <script>
-    // URL de tu conector independiente de Apps Script publicado
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzom1ISxqtJouPi8JpsTpQoEjtK1faKM70HQNDELzmdtA53LWP0bElyPzOmdRd1f_ka/exec";
 
     let html5Qrcode;
     let datosFotosBase64 = { fotoIne: null, fotoCarro: null };
 
-    // Automatiza el inicio y bloquea el uso estricto de la cámara trasera
-    function iniciarEscanerAutomatico() {
-        html5Qrcode = new Html5Qrcode("reader");
-        
-        // Configuración estricta de escaneo: solo cámara trasera y sin archivos locales
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        
-        html5Qrcode.start(
-            { facingMode: "environment" }, // Obliga el uso de la cámara trasera (Sin selfie)
-            config,
-            onScanSuccess,
-            onScanFailure
-        ).catch(err => {
-            console.log("Esperando permisos de cámara...");
-        });
-    }
+    // Función principal que decide si procesa los datos del link o activa la cámara
+    function verificarRutaDeEntrada() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tipo = urlParams.get("t");
 
-    function onScanSuccess(decodedText) {
-        try {
-            // Apaga y detiene por completo el flujo de la cámara trasera al detectar un QR
-            html5Qrcode.stop().then(() => {
-                procesarDatosQR(decodedText);
-            }).catch(err => {
-                procesarDatosQR(decodedText);
-            });
-        } catch (e) {
-            mostrarPantalla("bg-error", "ERROR DE LECTURA", "El código QR escaneado no contiene el formato web requerido.");
+        // SI LA URL YA TRAE DATOS (El guardia escaneó el QR desde afuera con su cel)
+        if (tipo) {
+            procesarDatosDeURL(urlParams);
+        } else {
+            // SI LA URL ESTÁ VACÍA (Entró directo a la web o es el siguiente escaneo)
+            activarEscanerEnPantalla();
         }
     }
 
-    function procesarDatosQR(decodedText) {
-        // Analizar parámetros del QR generado por el portal
-        const urlObj = new URL(decodedText);
-        const tipo = urlObj.searchParams.get("t");
-        const nombre = urlObj.searchParams.get("n") || "";
-        const calle = urlObj.searchParams.get("c") || "";
-        const numero = urlObj.searchParams.get("num") || "";
-        const hashRecibido = urlObj.searchParams.get("h") || "";
+    // Lee los datos directo del enlace saltándose el escáner interno
+    function procesarDatosDeURL(params) {
+        const tipo = params.get("t");
+        const nombre = params.get("n") || "";
+        const calle = params.get("c") || "";
+        const numero = params.get("num") || "";
+        const hashRecibido = params.get("h") || "";
 
-        // Candado básico de seguridad criptográfica del QR
         const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
         const hashCalculado = btoa(stringFirma).replace(/=/g, "");
 
         if (hashRecibido !== hashCalculado) {
-            mostrarPantalla("bg-rojo", "QR INVÁLIDO", "Este código QR no pertenece al sistema original de Ibea o fue manipulado.");
+            mostrarPantalla("bg-rojo", "QR INVÁLIDO", "Este código QR no pertenece al sistema original de Ibea.");
             return;
         }
 
         if (tipo === "r") {
             mostrarPantalla("bg-verde", "ACCESO AUTORIZADO", `RESIDENTE: AL CORRIENTE<br><br><strong>Propietario:</strong> ${nombre}<br><strong>Domicilio:</strong> ${calle} #${numero}`);
         } else if (tipo === "v") {
-            mostrarPantalla("bg-azul", "PASE DE VISITA VÁLIDO", `Domicilio: ${calle} #${numero}<br>Toma las evidencias correspondientes abajo para abrir la pluma.`);
+            mostrarPantalla("bg-azul", "PASE DE VISITA VÁLIDO", `Domicilio: ${calle} #${numero}<br>Llena los datos abajo para permitir el acceso.`);
             
             document.getElementById("formCalle").value = calle;
             document.getElementById("formNumero").value = numero;
@@ -213,12 +191,32 @@
             
             document.getElementById("visitaFormContainer").style.display = "block";
         } else {
-            mostrarPantalla("bg-error", "QR NO RECONOCIDO", "El tipo de código escaneado no es compatible con el control de caseta.");
+            mostrarPantalla("bg-error", "QR NO RECONOCIDO", "Formato no compatible.");
         }
     }
 
-    function onScanFailure(error) {
-        // Silencioso durante el rastreo de líneas del QR
+    // Solo se activa si el guardia necesita usar el escáner interno de la app
+    function activarEscanerEnPantalla() {
+        document.getElementById("resultScreen").style.display = "none";
+        document.getElementById("reader").style.display = "block";
+        
+        html5Qrcode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        html5Qrcode.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => {
+                html5Qrcode.stop().then(() => {
+                    const urlObj = new URL(decodedText);
+                    procesarDatosDeURL(urlObj.searchParams);
+                }).catch(() => {
+                    const urlObj = new URL(decodedText);
+                    procesarDatosDeURL(urlObj.searchParams);
+                });
+            },
+            () => {}
+        ).catch(err => console.log("Cámara lista."));
     }
 
     function mostrarPantalla(claseBg, titulo, descripcion) {
@@ -268,7 +266,7 @@
         const numero = document.getElementById("formNumero").value;
 
         if(!nombreVisita) {
-            alert("Por favor escribe el nombre de la visita (tomado de la INE) antes de guardar.");
+            alert("Por favor escribe el nombre de la visita.");
             return;
         }
 
@@ -284,25 +282,24 @@
             body: JSON.stringify(datosFotosBase64)
         })
         .then(() => {
-            alert("¡Registro guardado con éxito en el Excel de Visitas!");
+            alert("¡Registro guardado con éxito!");
             reiniciarEscaner();
         })
         .catch(err => {
-            alert("Error de conexión al guardar: " + err);
+            alert("Error al guardar: " + err);
             btn.disabled = false;
             btn.innerText = "Guardar Entrada";
         });
     }
 
     function reiniciarEscaner() {
-        document.getElementById("resultScreen").style.display = "none";
-        document.getElementById("visitaFormContainer").style.display = "none";
-        document.getElementById("reader").style.display = "block";
-        iniciarEscanerAutomatico();
+        // Limpiamos los parámetros de la barra de direcciones para que no vuelva a cargar la misma casa
+        window.history.replaceState({}, document.title, window.location.pathname);
+        activarEscanerEnPantalla();
     }
 
-    // Arranca directo al abrir el sitio web del guardia
-    window.onload = iniciarEscanerAutomatico;
+    // Arranca revisando si viene de un escaneo externo
+    window.onload = verificarRutaDeEntrada;
 </script>
 </body>
 </html>
