@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validación de Acceso - Guardia</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e272e;
+            color: #fff;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background: #2f3640;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .header-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .status-box {
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .info-card {
+            background: #353b48;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+            margin-bottom: 15px;
+            border: 1px solid #485460;
+        }
+        .info-label { font-size: 12px; color: #dcdde1; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+        .info-value { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 12px; }
+        .info-value:last-child { margin-bottom: 0; }
+        
+        /* Estados dinámicos */
+        .status-verificando { background: #f1c40f; color: #2c3e50; }
+        .status-valido { background: #2ecc71; color: #fff; }
+        .status-pendiente { background: #e67e22; color: #fff; }
+        .status-invalido { background: #e74c3c; color: #fff; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-title">Control de Acceso</div>
+    <div id="statusBox" class="status-box status-verificando">🔄 Verificando...</div>
+    
+    <div class="info-card">
+        <div class="info-label">Propietario / Residente</div>
+        <div id="lblNombre" class="info-value">Cargando...</div>
+        
+        <div class="info-label">Dirección</div>
+        <div id="lblDireccion" class="info-value">Cargando...</div>
+        
+        <div class="info-label">Estatus de Cuenta en Vivo</div>
+        <div id="lblEstatus" class="info-value">Conectando a base de datos...</div>
+    </div>
+</div>
+
+<script>
+    const sheetId = '1AK5V9JsS5eKEUVTEnEhtdKetIwGty1OPvD0WAswaK5E';
+    const sheetName = 'ACTUALIZADO';
+    const urlCsv = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+
+    const mesesOrden = ["septiembre", "octubre", "noviembre", "diciembre", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto"];
+    const mesesNaturales = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const MES_ACTUAL = mesesNaturales[new Date().getMonth()];
+
+    function parsearCSV(texto) {
+        const lineas = texto.split(/\r?\n/);
+        if(lineas.length === 0) return [];
+        const encabezados = lineas[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+        const registros = [];
+        for(let i = 1; i < lineas.length; i++) {
+            if(!lineas[i].trim()) continue;
+            const celdas = lineas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, '').trim());
+            const filaObj = {};
+            encabezados.forEach((encabezado, index) => {
+                filaObj[encabezado] = celdas[index] || "";
+            });
+            registros.push(filaObj);
+        }
+        return registros;
+    }
+
+    async function procesarEscaneo() {
+        const params = new URLSearchParams(window.location.search);
+        const urlNombre = params.get('n');
+        const urlCalle = params.get('c');
+        const urlNumero = params.get('num');
+        const urlHash = params.get('h');
+
+        if (!urlNombre || !urlCalle || !urlNumero || !urlHash) {
+            mostrarResultado('invalido', 'Código Inválido', 'QR incompleto o dañado', 'Faltan parámetros en la URL.');
+            return;
+        }
+
+        const stringFirma = urlCalle.trim().toLowerCase() + "-" + urlNumero.trim().toLowerCase();
+        const hashEsperado = btoa(stringFirma).replace(/=/g, "");
+
+        if (urlHash !== hashEsperado) {
+            mostrarResultado('invalido', 'Código Inválido', 'Falsificación detectada', 'El hash de seguridad no coincide.');
+            return;
+        }
+
+        document.getElementById('lblNombre').textContent = urlNombre;
+        document.getElementById('lblDireccion').textContent = `${urlCalle} #${urlNumero}`;
+
+        try {
+            const respuesta = await fetch(urlCsv);
+            if (!respuesta.ok) throw new Error("Error CSV");
+            const textoCsv = await respuesta.text();
+            const bd = parsearCSV(textoCsv);
+
+            let registroCasa = null;
+            for (const fila of bd) {
+                const calleBd = (fila["Calle"] || fila["CALLE"] || "").toString().trim().toLowerCase();
+                const numeroBd = (fila["Número Oficial"] || fila["NÚMERO OFICIAL"] || fila["Número oficial"] || "").toString().trim().toLowerCase();
+                if (calleBd === urlCalle.toLowerCase() && numeroBd === urlNumero.toLowerCase()) {
+                    registroCasa = fila;
+                    break;
+                }
+            }
+
+            if (!registroCasa) {
+                mostrarResultado('invalido', 'No Registrado', urlNombre, 'El domicilio no existe en la base de datos.');
+                return;
+            }
+
+            const mesInicia = (registroCasa["Inicia cuota en"] || registroCasa["INICIA CUOTA EN"] || "").toString().trim().toLowerCase();
+            const indexInicio = mesesOrden.indexOf(mesInicia);
+            const indexActual = mesesOrden.indexOf(MES_ACTUAL);
+
+            if (indexInicio === -1 || indexActual === -1) {
+                mostrarResultado('invalido', 'Error BaseDatos', urlNombre, 'Mes de inicio no válido configurado.');
+                return;
+            }
+
+            let mesesPendientes = [];
+            let mesActualPendiente = false;
+            let i = indexInicio;
+            let seguridadContador = 0;
+
+            while (seguridadContador < 13) {
+                const nombreMes = mesesOrden[i];
+                const valor = (registroCasa[nombreMes.toUpperCase()] || registroCasa[nombreMes] || "").toString().trim().toLowerCase();
+                const estaPagado = valor !== "" && valor !== "0" && valor !== "no" && valor !== "pendiente";
+
+                if (!estaPagado) {
+                    if (nombreMes === MES_ACTUAL) mesActualPendiente = true;
+                    else mesesPendientes.push(nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1));
+                }
+                if (i === indexActual) break;
+                i = (i + 1) % mesesOrden.length;
+                seguridadContador++;
+            }
+
+            if (mesesPendientes.length > 0) {
+                let todos = [...mesesPendientes];
+                if (mesActualPendiente) todos.push(MES_ACTUAL.charAt(0).toUpperCase() + MES_ACTUAL.slice(1));
+                mostrarResultado('invalido', 'ACCESO DENEGADO', urlNombre, `Debe meses: ${todos.join(', ')}`);
+            } else if (mesActualPendiente) {
+                mostrarResultado('pendiente', 'ACCESO PENDIENTE', urlNombre, `Falta pagar el mes actual (${MES_ACTUAL.toUpperCase()})`);
+            } else {
+                mostrarResultado('valido', 'ACCESO AUTORIZADO', urlNombre, 'Cuenta al corriente. Permitir ingreso.');
+            }
+
+        } catch (error) {
+            mostrarResultado('invalido', 'Error de Red', urlNombre, 'No se pudo verificar el estatus en vivo.');
+        }
+    }
+
+    function mostrarResultado(clase, estado, nombre, estatusTexto) {
+        const box = document.getElementById('statusBox');
+        box.className = 'status-box status-' + clase;
+        box.textContent = estado;
+        document.getElementById('lblNombre').textContent = nombre;
+        document.getElementById('lblEstatus').textContent = estatusTexto;
+    }
+
+    window.onload = procesarEscaneo;
+</script>
+</body>
+</html>
