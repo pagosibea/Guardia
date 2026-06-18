@@ -3,239 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Validación de Acceso - Guardia</title>
+    <title>Control de Acceso Caseta - IBEA</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1e272e;
-            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #1e272e;
+            color: #ffffff;
             margin: 0;
             padding: 15px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            min-height: 100vh;
         }
         .container {
             width: 100%;
-            max-width: 450px;
+            max-width: 500px;
             background: #2f3640;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            text-align: center;
-            box-sizing: border-box;
-        }
-        .header-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
-        .status-box {
             padding: 20px;
             border-radius: 12px;
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 25px;
-            text-transform: uppercase;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            box-sizing: border-box;
         }
-        .info-card {
-            background: #353b48;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: left;
-            margin-bottom: 15px;
-            border: 1px solid #485460;
-        }
-        .info-label { font-size: 12px; color: #dcdde1; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
-        .info-value { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 12px; }
-        .info-value:last-child { margin-bottom: 0; }
+        h2 { text-align: center; margin-top: 0; color: #f5f6fa; font-size: 22px; }
         
-        .btn-registro-visita {
-            background: #2980b9;
-            color: white;
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
+        #reader {
             width: 100%;
-            text-decoration: none;
-            display: none;
-            margin-top: 15px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px dashed #718093;
+            background: #22272e;
         }
-        .btn-registro-visita:hover { background: #3498db; }
+        
+        .result-screen {
+            display: none;
+            margin-top: 20px;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Estados */
-        .status-verificando { background: #f1c40f; color: #2c3e50; }
-        .status-valido { background: #2ecc71; color: #fff; }
-        .status-pendiente { background: #e67e22; color: #fff; }
-        .status-invalido { background: #e74c3c; color: #fff; }
-        .status-visita { background: #3498db; color: #fff; }
+        .status-title { font-size: 26px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
+        .status-desc { font-size: 16px; line-height: 1.4; margin-bottom: 15px; }
+        
+        /* Colores de Pantallas según flujo operativo */
+        .bg-verde { background-color: #2ecc71; color: #fff; }
+        .bg-naranja { background-color: #e67e22; color: #fff; }
+        .bg-rojo { background-color: #e74c3c; color: #fff; }
+        .bg-azul { background-color: #3498db; color: #fff; }
+        .bg-error { background-color: #7f8c8d; color: #fff; }
+
+        /* Formulario de captura rápida integrado (Cámara en 1 clic) */
+        .capture-form {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: left;
+        }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #f5f6fa; }
+        .form-group input {
+            width: 100%; padding: 10px; border: none; border-radius: 5px;
+            box-sizing: border-box; font-size: 15px; background: #fff; color: #333;
+        }
+        .form-group input[readonly] { background: #dcdde1; color: #2f3640; font-weight: bold; }
+
+        /* Estilo para los inputs nativos de cámara (Saltan directo a capturar) */
+        .camera-btn-wrapper {
+            position: relative; margin-bottom: 15px; background: #2f3640;
+            border: 2px dashed #fff; border-radius: 6px; padding: 12px; text-align: center; cursor: pointer;
+        }
+        .camera-btn-wrapper input[type="file"] {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+        }
+        .camera-label { font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .preview-img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 5px; margin-top: 8px; display: none; }
+
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 6px;
+            font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s;
+        }
+        .btn-submit { background-color: #2ecc71; color: white; text-transform: uppercase; }
+        .btn-submit:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .btn-reset { background-color: #7f8c8d; color: white; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-title">Control de Acceso</div>
-    <div id="statusBox" class="status-box status-verificando">🔄 Verificando...</div>
+    <h2>Caseta: Escáner IBEA</h2>
     
-    <div class="info-card">
-        <div id="lblTipoPersona" class="info-label">Propietario / Residente</div>
-        <div id="lblNombre" class="info-value">Cargando...</div>
+    <div id="reader"></div>
+    
+    <div id="resultScreen" class="result-screen">
+        <div id="statusTitle" class="status-title">Estatus</div>
+        <div id="statusDesc" class="status-desc">Detalles del escaneo.</div>
         
-        <div class="info-label">Dirección Destino</div>
-        <div id="lblDireccion" class="info-value">Cargando...</div>
-        
-        <div class="info-label">Estatus en Vivo</div>
-        <div id="lblEstatus" class="info-value">Conectando a base de datos...</div>
-    </div>
+        <div id="visitaFormContainer" style="display: none;">
+            <div class="capture-form">
+                <div class="form-group">
+                    <label>Calle Destino</label>
+                    <input type="text" id="formCalle" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Número Destino</label>
+                    <input type="text" id="formNumero" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Visitante</label>
+                    <input type="text" id="formNombre" placeholder="Escribe el nombre de la INE">
+                </div>
 
-    <!-- Botón dinámico para el guardia -->
-    <a id="btnFormVisita" class="btn-registro-visita" href="#" target="_blank">👉 Abrir Registro de Caseta</a>
+                <div class="camera-btn-wrapper">
+                    <div class="camera-label">🪪 Tomar Foto de la INE</div>
+                    <input type="file" id="camIne" accept="image/*" capture="environment" onchange="procesarFoto(this, 'previewIne')">
+                    <img id="previewIne" class="preview-img">
+                </div>
+
+                <div class="camera-btn-wrapper">
+                    <div class="camera-label">🚗 Tomar Foto del Carro / Placas</div>
+                    <input type="file" id="camCarro" accept="image/*" capture="environment" onchange="procesarFoto(this, 'previewCarro')">
+                    <img id="previewCarro" class="preview-img">
+                </div>
+
+                <button id="btnEnviarRegistro" class="btn btn-submit" onclick="enviarRegistroAExcel()">Guardar Entrada</button>
+            </div>
+        </div>
+
+        <button class="btn btn-reset" onclick="reiniciarEscaner()">🔄 Escanear Siguiente</button>
+    </div>
 </div>
 
 <script>
-    const sheetId = '1AK5V9JsS5eKEUVTEnEhtdKetIwGty1OPvD0WAswaK5E';
-    const sheetName = 'ACTUALIZADO';
-    const urlCsv = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    // URL de tu conector independiente de Apps Script publicado
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzom1ISxqtJouPi8JpsTpQoEjtK1faKM70HQNDELzmdtA53LWP0bElyPzOmdRd1f_ka/exec";
 
-    const mesesOrden = ["septiembre", "octubre", "noviembre", "diciembre", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto"];
-    const mesesNaturales = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-    const MES_ACTUAL = mesesNaturales[new Date().getMonth()];
+    let html5QrcodeScanner;
+    let datosFotosBase64 = { fotoIne: null, fotoCarro: null };
 
-    function parsearCSV(texto) {
-        const lineas = texto.split(/\r?\n/);
-        if(lineas.length === 0) return [];
-        const encabezados = lineas[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-        const registros = [];
-        for(let i = 1; i < lineas.length; i++) {
-            if(!lineas[i].trim()) continue;
-            const celdas = lineas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, '').trim());
-            const filaObj = {};
-            encabezados.forEach((encabezado, index) => {
-                filaObj[encabezado] = celdas[index] || "";
-            });
-            registros.push(filaObj);
-        }
-        return registros;
+    function iniciarEscaner() {
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true
+        });
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
     }
 
-    async function procesarEscaneo() {
-        const params = new URLSearchParams(window.location.search);
-        const urlTipo = params.get('t') || 'r'; 
-        const urlNombre = params.get('n');
-        const urlCalle = params.get('c');
-        const urlNumero = params.get('num');
-        const urlHash = params.get('h');
-
-        if (!urlNombre || !urlCalle || !urlNumero || !urlHash) {
-            mostrarResultado('invalido', 'Código Inválido', 'QR incompleto', 'Faltan parámetros en la URL.');
-            return;
-        }
-
-        const stringFirma = urlCalle.trim().toLowerCase() + "-" + urlNumero.trim().toLowerCase();
-        const hashEsperado = btoa(stringFirma).replace(/=/g, "");
-
-        if (urlHash !== hashEsperado) {
-            mostrarResultado('invalido', 'Código Inválido', 'Falsificación detectada', 'El hash de seguridad no coincide.');
-            return;
-        }
-
-        document.getElementById('lblDireccion').textContent = `${urlCalle} #${urlNumero}`;
-
-        // LÓGICA SI ES PASE DE VISITA (CON TU LINK REAL Y EL ID DE NOMBRE DETECTADO)
-        if (urlTipo === 'v') {
-            document.getElementById('lblTipoPersona').textContent = "Nombre del Visitante Invitado";
-            
-            // Calculamos el ID correlativo para la tercera pregunta (nombre del visitante) basándonos en tu patrón de IDs
-            // Tu calle es entry.73630097, tu número es entry.541084417, tu nombre por descarte en el orden del formulario es entry.1541570774
-            const urlFormRelleno = `https://docs.google.com/forms/d/e/1FAIpQLSdGWlhbBsJIR4QzNjuspojf8dManakczm0N9MCOgkOvvoOP9w/viewform?usp=pp_url&entry.73630097=${encodeURIComponent(urlCalle)}&entry.541084417=${encodeURIComponent(urlNumero)}&entry.1541570774=${encodeURIComponent(urlNombre)}`;
-            
-            const btnForm = document.getElementById('btnFormVisita');
-            btnForm.href = urlFormRelleno;
-            btnForm.style.display = 'block';
-
-            mostrarResultado('visita', 'Pase de Visita', urlNombre, 'Pase válido. Presiona el botón azul para tomar fotos e ingresar.');
-            return;
-        }
-
-        // LÓGICA SI ES RESIDENTE
-        document.getElementById('lblTipoPersona').textContent = "Propietario / Residente";
-        
+    function onScanSuccess(decodedText) {
         try {
-            const respuesta = await fetch(urlCsv);
-            if (!respuesta.ok) throw new Error("Error CSV");
-            const textoCsv = await respuesta.text();
-            const bd = parsearCSV(textoCsv);
+            html5QrcodeScanner.clear(); // Apaga la cámara del escáner al leer con éxito
+            
+            // Analizar parámetros del QR generado por el portal
+            const urlObj = new URL(decodedText);
+            const tipo = urlObj.searchParams.get("t");
+            const nombre = urlObj.searchParams.get("n") || "";
+            const calle = urlObj.searchParams.get("c") || "";
+            const numero = urlObj.searchParams.get("num") || "";
+            const hashRecibido = urlObj.searchParams.get("h") || "";
 
-            let registroCasa = null;
-            for (const fila of bd) {
-                const calleBd = (fila["Calle"] || fila["CALLE"] || "").toString().trim().toLowerCase();
-                const numeroBd = (fila["Número Oficial"] || fila["NÚMERO OFICIAL"] || fila["Número oficial"] || "").toString().trim().toLowerCase();
-                if (calleBd === urlCalle.toLowerCase() && numeroBd === urlNumero.toLowerCase()) {
-                    registroCasa = fila;
-                    break;
-                }
-            }
+            // Candado básico de seguridad criptográfica del QR
+            const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
+            const hashCalculado = btoa(stringFirma).replace(/=/g, "");
 
-            if (!registroCasa) {
-                mostrarResultado('invalido', 'No Registrado', urlNombre, 'El domicilio no existe en la base de datos.');
+            if (hashRecibido !== hashCalculado) {
+                mostrarPantalla("bg-rojo", "QR INVÁLIDO", "Este código QR no pertenece al sistema original de Ibea o fue manipulado.");
                 return;
             }
 
-            const mesInicia = (registroCasa["Inicia cuota en"] || registroCasa["INICIA CUOTA EN"] || "").toString().trim().toLowerCase();
-            const indexInicio = mesesOrden.indexOf(mesInicia);
-            const indexActual = mesesOrden.indexOf(MES_ACTUAL);
-
-            if (indexInicio === -1 || indexActual === -1) {
-                mostrarResultado('invalido', 'Error BaseDatos', urlNombre, 'Configuración de meses errónea.');
-                return;
-            }
-
-            let mesesPendientes = [];
-            let mesActualPendiente = false;
-            let i = indexInicio;
-            let seguridadContador = 0;
-
-            while (seguridadContador < 13) {
-                const nombreMes = mesesOrden[i];
-                const valor = (registroCasa[nombreMes.toUpperCase()] || registroCasa[nombreMes] || "").toString().trim().toLowerCase();
-                const estaPagado = valor !== "" && valor !== "0" && valor !== "no" && valor !== "pendiente";
-
-                if (!estaPagado) {
-                    if (nombreMes === MES_ACTUAL) mesActualPendiente = true;
-                    else mesesPendientes.push(nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1));
-                }
-                if (i === indexActual) break;
-                i = (i + 1) % mesesOrden.length;
-                seguridadContador++;
-            }
-
-            if (mesesPendientes.length > 0) {
-                let todos = [...mesesPendientes];
-                if (mesActualPendiente) todos.push(MES_ACTUAL.charAt(0).toUpperCase() + MES_ACTUAL.slice(1));
-                mostrarResultado('invalido', 'ACCESO DENEGADO', urlNombre, `Debe meses: ${todos.join(', ')}`);
-            } else if (mesActualPendiente) {
-                mostrarResultado('pendiente', 'ACCESO PENDIENTE', urlNombre, `Falta cubrir el mes actual (${MES_ACTUAL.toUpperCase()})`);
+            if (tipo === "r") {
+                // FLUJO RESIDENTE: Acceso directo según estado de cuotas
+                mostrarPantalla("bg-verde", "ACCESO AUTORIZADO", `RESIDENTE: AL CORRIENTE<br><br><strong>Propietario:</strong> ${nombre}<br><strong>Domicilio:</strong> ${calle} #${numero}`);
+            } else if (tipo === "v") {
+                // FLUJO INVITADO: Desplegar el formulario in-app de toma rápida
+                mostrarPantalla("bg-azul", "PASE DE VISITA VÁLIDO", `Domicilio: ${calle} #${numero}<br>Toma las evidencias correspondientes abajo para abrir la pluma.`);
+                
+                document.getElementById("formCalle").value = calle;
+                document.getElementById("formNumero").value = numero;
+                document.getElementById("formNombre").value = "";
+                document.getElementById("previewIne").style.display = "none";
+                document.getElementById("previewCarro").style.display = "none";
+                datosFotosBase64 = { fotoIne: null, fotoCarro: null };
+                
+                document.getElementById("visitaFormContainer").style.display = "block";
             } else {
-                mostrarResultado('valido', 'ACCESO AUTORIZADO', urlNombre, 'Cuenta al corriente. Permitir ingreso.');
+                mostrarPantalla("bg-error", "QR NO RECONOCIDO", "El tipo de código escaneado no es compatible con el control de caseta.");
             }
 
-        } catch (error) {
-            mostrarResultado('invalido', 'Error de Red', urlNombre, 'No se pudo verificar el estatus en vivo.');
+        } catch (e) {
+            mostrarPantalla("bg-error", "ERROR DE LECTURA", "El código QR escaneado no contiene el formato web requerido.");
         }
     }
 
-    function mostrarResultado(clase, estado, nombre, estatusTexto) {
-        const box = document.getElementById('statusBox');
-        box.className = 'status-box status-' + clase;
-        box.textContent = estado;
-        document.getElementById('lblNombre').textContent = nombre;
-        document.getElementById('lblEstatus').textContent = estatusTexto;
+    function onScanFailure(error) {
+        // Ejecución silenciosa mientras busca códigos QR en la imagen viva
     }
 
-    window.onload = procesarEscaneo;
+    function mostrarPantalla(claseBg, titulo, descripcion) {
+        document.getElementById("reader").style.display = "none";
+        const screen = document.getElementById("resultScreen");
+        screen.className = "result-screen " + claseBg;
+        document.getElementById("statusTitle").innerText = titulo;
+        document.getElementById("statusDesc").innerHTML = descripcion;
+        document.getElementById("visitaFormContainer").style.display = "none";
+        screen.style.display = "block";
+    }
+
+    // Procesa y convierte la captura de cámara viva a texto Base64 comprimido
+    function procesarFoto(input, idPreview) {
+        if (input.files && input.files[0]) {
+            const lector = new FileReader();
+            lector.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Redimensionar para optimizar datos de red en caseta
+                    const canvas = document.createElement("canvas");
+                    const maxAncho = 800;
+                    const escala = maxAncho / img.width;
+                    canvas.width = maxAncho;
+                    canvas.height = img.height * escala;
+                    
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    const base64Comprimido = canvas.toDataURL("image/jpeg", 0.7).split(",")[1];
+                    
+                    if (idPreview === 'previewIne') datosFotosBase64.fotoIne = { base64: base64Comprimido };
+                    if (idPreview === 'previewCarro') datosFotosBase64.fotoCarro = { base64: base64Comprimido };
+
+                    const preview = document.getElementById(idPreview);
+                    preview.src = canvas.toDataURL("image/jpeg", 0.7);
+                    preview.style.display = "block";
+                };
+                img.src = e.target.result;
+            };
+            lector.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Envía el paquete completo al puente Apps Script en tu Sheets
+    function enviarRegistroAExcel() {
+        const btn = document.getElementById("btnEnviarRegistro");
+        const nombreVisita = document.getElementById("formNombre").value.trim();
+        const calle = document.getElementById("formCalle").value;
+        const numero = document.getElementById("formNumero").value;
+
+        if(!nombreVisita) {
+            alert("Por favor escribe el nombre de la visita (tomado de la INE) antes de guardar.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Guardando en Excel...";
+
+        const urlEnvio = `${WEB_APP_URL}?calle=${encodeURIComponent(calle)}&numero=${encodeURIComponent(numero)}&nombre=${encodeURIComponent(nombreVisita)}`;
+
+        fetch(urlEnvio, {
+            method: "POST",
+            mode: "no-cors", // Crucial para brincar bloqueos de origen cruzado de navegadores
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datosFotosBase64)
+        })
+        .then(() => {
+            alert("¡Registro guardado con éxito en el Excel de Visitas!");
+            reiniciarEscaner();
+        })
+        .catch(err => {
+            alert("Error de conexión al guardar: " + err);
+            btn.disabled = false;
+            btn.innerText = "Guardar Entrada";
+        });
+    }
+
+    function reiniciarEscaner() {
+        document.getElementById("resultScreen").style.display = "none";
+        document.getElementById("visitaFormContainer").style.display = "none";
+        document.getElementById("reader").style.display = "block";
+        iniciarEscaner();
+    }
+
+    window.onload = iniciarEscaner;
 </script>
 </body>
 </html>
