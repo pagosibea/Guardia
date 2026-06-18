@@ -35,6 +35,13 @@
             background: #22272e;
         }
         
+        /* Ocultar textos innecesarios y botones molestos generados por la librería */
+        #reader__dashboard_section_csr, #reader__status_span { display: none !important; }
+        #reader button {
+            background-color: #3498db; color: white; border: none; padding: 12px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin: 10px 0;
+        }
+
         .result-screen {
             display: none;
             margin-top: 20px;
@@ -141,65 +148,77 @@
     // URL de tu conector independiente de Apps Script publicado
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzom1ISxqtJouPi8JpsTpQoEjtK1faKM70HQNDELzmdtA53LWP0bElyPzOmdRd1f_ka/exec";
 
-    let html5QrcodeScanner;
+    let html5Qrcode;
     let datosFotosBase64 = { fotoIne: null, fotoCarro: null };
 
-    function iniciarEscaner() {
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 },
-            rememberLastUsedCamera: true
+    // Automatiza el inicio y bloquea el uso estricto de la cámara trasera
+    function iniciarEscanerAutomatico() {
+        html5Qrcode = new Html5Qrcode("reader");
+        
+        // Configuración estricta de escaneo: solo cámara trasera y sin archivos locales
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        html5Qrcode.start(
+            { facingMode: "environment" }, // Obliga el uso de la cámara trasera (Sin selfie)
+            config,
+            onScanSuccess,
+            onScanFailure
+        ).catch(err => {
+            console.log("Esperando permisos de cámara...");
         });
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
     }
 
     function onScanSuccess(decodedText) {
         try {
-            html5QrcodeScanner.clear(); // Apaga la cámara del escáner al leer con éxito
-            
-            // Analizar parámetros del QR generado por el portal
-            const urlObj = new URL(decodedText);
-            const tipo = urlObj.searchParams.get("t");
-            const nombre = urlObj.searchParams.get("n") || "";
-            const calle = urlObj.searchParams.get("c") || "";
-            const numero = urlObj.searchParams.get("num") || "";
-            const hashRecibido = urlObj.searchParams.get("h") || "";
-
-            // Candado básico de seguridad criptográfica del QR
-            const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
-            const hashCalculado = btoa(stringFirma).replace(/=/g, "");
-
-            if (hashRecibido !== hashCalculado) {
-                mostrarPantalla("bg-rojo", "QR INVÁLIDO", "Este código QR no pertenece al sistema original de Ibea o fue manipulado.");
-                return;
-            }
-
-            if (tipo === "r") {
-                // FLUJO RESIDENTE: Acceso directo según estado de cuotas
-                mostrarPantalla("bg-verde", "ACCESO AUTORIZADO", `RESIDENTE: AL CORRIENTE<br><br><strong>Propietario:</strong> ${nombre}<br><strong>Domicilio:</strong> ${calle} #${numero}`);
-            } else if (tipo === "v") {
-                // FLUJO INVITADO: Desplegar el formulario in-app de toma rápida
-                mostrarPantalla("bg-azul", "PASE DE VISITA VÁLIDO", `Domicilio: ${calle} #${numero}<br>Toma las evidencias correspondientes abajo para abrir la pluma.`);
-                
-                document.getElementById("formCalle").value = calle;
-                document.getElementById("formNumero").value = numero;
-                document.getElementById("formNombre").value = "";
-                document.getElementById("previewIne").style.display = "none";
-                document.getElementById("previewCarro").style.display = "none";
-                datosFotosBase64 = { fotoIne: null, fotoCarro: null };
-                
-                document.getElementById("visitaFormContainer").style.display = "block";
-            } else {
-                mostrarPantalla("bg-error", "QR NO RECONOCIDO", "El tipo de código escaneado no es compatible con el control de caseta.");
-            }
-
+            // Apaga y detiene por completo el flujo de la cámara trasera al detectar un QR
+            html5Qrcode.stop().then(() => {
+                procesarDatosQR(decodedText);
+            }).catch(err => {
+                procesarDatosQR(decodedText);
+            });
         } catch (e) {
             mostrarPantalla("bg-error", "ERROR DE LECTURA", "El código QR escaneado no contiene el formato web requerido.");
         }
     }
 
+    function procesarDatosQR(decodedText) {
+        // Analizar parámetros del QR generado por el portal
+        const urlObj = new URL(decodedText);
+        const tipo = urlObj.searchParams.get("t");
+        const nombre = urlObj.searchParams.get("n") || "";
+        const calle = urlObj.searchParams.get("c") || "";
+        const numero = urlObj.searchParams.get("num") || "";
+        const hashRecibido = urlObj.searchParams.get("h") || "";
+
+        // Candado básico de seguridad criptográfica del QR
+        const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
+        const hashCalculado = btoa(stringFirma).replace(/=/g, "");
+
+        if (hashRecibido !== hashCalculado) {
+            mostrarPantalla("bg-rojo", "QR INVÁLIDO", "Este código QR no pertenece al sistema original de Ibea o fue manipulado.");
+            return;
+        }
+
+        if (tipo === "r") {
+            mostrarPantalla("bg-verde", "ACCESO AUTORIZADO", `RESIDENTE: AL CORRIENTE<br><br><strong>Propietario:</strong> ${nombre}<br><strong>Domicilio:</strong> ${calle} #${numero}`);
+        } else if (tipo === "v") {
+            mostrarPantalla("bg-azul", "PASE DE VISITA VÁLIDO", `Domicilio: ${calle} #${numero}<br>Toma las evidencias correspondientes abajo para abrir la pluma.`);
+            
+            document.getElementById("formCalle").value = calle;
+            document.getElementById("formNumero").value = numero;
+            document.getElementById("formNombre").value = "";
+            document.getElementById("previewIne").style.display = "none";
+            document.getElementById("previewCarro").style.display = "none";
+            datosFotosBase64 = { fotoIne: null, fotoCarro: null };
+            
+            document.getElementById("visitaFormContainer").style.display = "block";
+        } else {
+            mostrarPantalla("bg-error", "QR NO RECONOCIDO", "El tipo de código escaneado no es compatible con el control de caseta.");
+        }
+    }
+
     function onScanFailure(error) {
-        // Ejecución silenciosa mientras busca códigos QR en la imagen viva
+        // Silencioso durante el rastreo de líneas del QR
     }
 
     function mostrarPantalla(claseBg, titulo, descripcion) {
@@ -212,14 +231,12 @@
         screen.style.display = "block";
     }
 
-    // Procesa y convierte la captura de cámara viva a texto Base64 comprimido
     function procesarFoto(input, idPreview) {
         if (input.files && input.files[0]) {
             const lector = new FileReader();
             lector.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    // Redimensionar para optimizar datos de red en caseta
                     const canvas = document.createElement("canvas");
                     const maxAncho = 800;
                     const escala = maxAncho / img.width;
@@ -244,7 +261,6 @@
         }
     }
 
-    // Envía el paquete completo al puente Apps Script en tu Sheets
     function enviarRegistroAExcel() {
         const btn = document.getElementById("btnEnviarRegistro");
         const nombreVisita = document.getElementById("formNombre").value.trim();
@@ -263,7 +279,7 @@
 
         fetch(urlEnvio, {
             method: "POST",
-            mode: "no-cors", // Crucial para brincar bloqueos de origen cruzado de navegadores
+            mode: "no-cors",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(datosFotosBase64)
         })
@@ -282,10 +298,11 @@
         document.getElementById("resultScreen").style.display = "none";
         document.getElementById("visitaFormContainer").style.display = "none";
         document.getElementById("reader").style.display = "block";
-        iniciarEscaner();
+        iniciarEscanerAutomatico();
     }
 
-    window.onload = iniciarEscaner;
+    // Arranca directo al abrir el sitio web del guardia
+    window.onload = iniciarEscanerAutomatico;
 </script>
 </body>
 </html>
