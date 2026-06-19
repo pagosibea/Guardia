@@ -152,7 +152,7 @@
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <div class="loading-text">ENVIANDO REGISTRO...</div>
+    <div class="loading-text">GUARDANDO EN HOJA DE CÁLCULO...</div>
 </div>
 
 <div class="container">
@@ -420,7 +420,7 @@
         `;
     }
 
-    // SOLUCIÓN TOTAL: Envío mixto (parámetros URL para texto + JSON stringificado en postData)
+    // AJUSTE CRÍTICO: Sincroniza la URL con los parámetros exactos requeridos por tu Apps Script
     function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
         const calleDestino = document.getElementById('evCalle').value.trim();
@@ -437,30 +437,34 @@
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
-        // 1. Tu Script lee las fotos desde el cuerpo usando JSON.parse(e.postData.contents)
-        const objetoFotos = {
+        // Estructura JSON exacta esperada por tu comando: JSON.parse(e.postData.contents)
+        const cuerpoDatos = {
             fotoIne: { base64: fotosCapturadas.ine },
             fotoCarro: fotosCapturadas.carro ? { base64: fotosCapturadas.carro } : null
         };
 
-        // 2. Tu Script lee texto usando e.parameter (p.calle, p.numero, p.nombre)
-        const urlFinal = `${WEB_APP_URL}?calle=${encodeURIComponent(calleDestino)}&numero=${encodeURIComponent(numeroDestino)}&nombre=${encodeURIComponent(nombreVisitante)}`;
+        // Forzamos los parámetros exactos en la URL de la petición POST para p.calle, p.numero y p.nombre
+        const urlPeticion = `${WEB_APP_URL}?calle=${encodeURIComponent(calleDestino)}&numero=${encodeURIComponent(numeroDestino)}&nombre=${encodeURIComponent(nombreVisitante)}`;
 
-        // Usamos fetch nativo enviando el string de fotos directamente en el cuerpo
-        fetch(urlFinal, {
+        fetch(urlPeticion, {
             method: "POST",
             mode: "no-cors",
-            body: JSON.stringify(objetoFotos)
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(cuerpoDatos)
         })
         .then(() => {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            alert("🎉 ¡Entrada Guardada! La pluma de caseta se ha autorizado.");
-            regresarAlEscaner(true);
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
+                regresarAlEscaner(true);
+            }, 1500);
         })
         .catch(err => {
             document.getElementById('loadingOverlay').style.display = 'none';
             console.error(err);
-            alert("Error al conectar con la base de datos.");
+            alert("Error de conexión al enviar el registro.");
         });
     }
 
