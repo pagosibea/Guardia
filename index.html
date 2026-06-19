@@ -376,6 +376,19 @@
             html5QrcodeScanner.clear();
         }
     }
+
+    // =====================================================
+    // DETECCIÓN AUTOMÁTICA AL ABRIR EL ENLACE DIRECTO
+    // =====================================================
+    function verificarDatosAlCargar() {
+        // Si la URL actual contiene parámetros (ej. ?t=r&n=...), los procesa de inmediato sin pedir activar la cámara
+        if (window.location.search) {
+            procesarUrlPase(window.location.href);
+        }
+    }
+
+    // Ejecutar automáticamente en cuanto el árbol DOM esté completamente listo
+    window.addEventListener('DOMContentLoaded', verificarDatosAlCargar);
 </script>
 
 </body>
