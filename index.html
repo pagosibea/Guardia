@@ -76,9 +76,20 @@
         
         .btn-foto {
             background: #1f2937; color: #f9fafb; border: 2px dashed #9ca3af; display: flex;
-            align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;
+            flex-direction: column; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;
+            height: auto; min-height: 55px; padding: 10px;
         }
         .btn-foto.capturada { border: 2px solid #10b981; background: #064e3b; }
+
+        /* Estilo para las vistas previas de las fotos capturadas */
+        .img-preview {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 6px;
+            margin-top: 5px;
+            border: 1px solid #10b981;
+            object-fit: contain;
+        }
 
         /* Controles de cámara adicionales */
         .cam-controls {
@@ -86,9 +97,45 @@
             gap: 10px;
             margin-bottom: 10px;
         }
+
+        /* Pantalla / Spinner de carga superpuesta */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(30, 37, 48, 0.85);
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .spinner {
+            border: 6px solid #2a3444;
+            border-top: 6px solid #3b82f6;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            font-family: sans-serif;
+        }
     </style>
 </head>
 <body>
+
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">CARGANDO...</div>
+</div>
 
 <div class="container">
     <div id="wrapperEscaner">
@@ -119,11 +166,15 @@
             <input type="text" id="evNombre" placeholder="Escribe el nombre de la INE">
         </div>
 
-        <button class="btn btn-foto" id="btnIne" onclick="capturarEvidencia('ine')">🪪 Tomar Foto de la INE</button>
-        <button class="btn btn-foto" id="btnCarro" onclick="capturarEvidencia('carro')">🚗 Tomar Foto del Carro / Placas</button>
+        <button class="btn btn-foto" id="btnIne" onclick="capturarEvidencia('ine')">
+            <span>🪪 Tomar Foto de la INE</span>
+        </button>
+        <button class="btn btn-foto" id="btnCarro" onclick="capturarEvidencia('carro')">
+            <span>🚗 Tomar Foto del Carro / Placas</span>
+        </button>
 
         <button class="btn btn-success" style="margin-top: 15px;" onclick="guardarEntradaCaseta()">GUARDAR ENTRADA</button>
-        <button class="btn btn-secondary" onclick="regresarAlEscaner()">🔄 Escanear Siguiente</button>
+        <button class="btn btn-secondary" onclick="regresarAlEscaner(false)">🔄 Escanear Siguiente</button>
     </div>
 </div>
 
@@ -147,18 +198,15 @@
         
         Html5Qrcode.getCameras().then(devices => {
             if (devices && devices.length > 0) {
-                // Filtramos la lista eliminando de raíz cualquier cámara frontal/selfie
                 camarasDisponibles = devices.filter(device => {
                     const label = device.label.toLowerCase();
                     return !(label.includes('front') || label.includes('delantera') || label.includes('selfie') || label.includes('user'));
                 });
 
-                // Si por alguna razón el filtro vacía la lista (ej. el navegador no da las etiquetas), usamos todas por respaldo
                 if (camarasDisponibles.length === 0) {
                     camarasDisponibles = devices;
                 }
 
-                // Intentamos buscar la mejor lente trasera principal (que no sea gran angular ni macro)
                 let indiceOptimo = 0;
                 for (let i = 0; i < camarasDisponibles.length; i++) {
                     const label = camarasDisponibles[i].label.toLowerCase();
@@ -172,7 +220,6 @@
                 
                 indiceCamaraActual = indiceOptimo;
                 
-                // Solo mostramos el botón de cambiar lente si hay más de una cámara TRASERA detectada
                 if (camarasDisponibles.length > 1) {
                     document.getElementById('areaControlesCamara').style.display = 'block';
                 } else {
@@ -219,7 +266,6 @@
         });
     }
 
-    // Cambia únicamente entre las opciones de lentes traseras del celular
     function alternarCamara() {
         if (camarasDisponibles.length <= 1) return;
         indiceCamaraActual = (indiceCamaraActual + 1) % camarasDisponibles.length;
@@ -248,7 +294,7 @@
     function procesarUrlPase(urlTexto) {
         if (!urlTexto.includes("?")) {
             alert("❌ Código QR Inválido o desconocido.");
-            regresarAlEscaner();
+            regresarAlEscaner(true);
             return;
         }
 
@@ -261,7 +307,7 @@
 
         if (!calle || !numero || !hash) {
             alert("❌ Datos de acceso corruptos o QR impreciso.");
-            regresarAlEscaner();
+            regresarAlEscaner(true);
             return;
         }
 
@@ -270,7 +316,7 @@
 
         if (hash !== hashEsperado) {
             alert("🚨 ¡ALERTA! Código QR falsificado o firma de seguridad inválida.");
-            regresarAlEscaner();
+            regresarAlEscaner(true);
             return;
         }
 
@@ -278,7 +324,7 @@
 
         if (tipo === 'r') {
             alert(`✅ ACCESO DE RESIDENTE VÁLIDO\n\nBienvenido de vuelta:\n🏠 Domicilio: ${calle} #${numero}`);
-            regresarAlEscaner();
+            regresarAlEscaner(true);
         } else {
             document.getElementById('wrapperEscaner').style.display = 'none';
             document.getElementById('panelEvidencias').style.display = 'block';
@@ -288,15 +334,21 @@
             document.getElementById('evNombre').value = "";
             
             fotosCapturadas = { ine: null, carro: null };
-            document.getElementById('btnIne').className = "btn btn-foto";
-            document.getElementById('btnIne').innerText = "🪪 Tomar Foto de la INE";
-            document.getElementById('btnCarro').className = "btn btn-foto";
-            document.getElementById('btnCarro').innerText = "🚗 Tomar Foto del Carro / Placas";
+            
+            // Limpiar vistas previas previas si existían
+            removerMiniatura('btnIne', "🪪 Tomar Foto de la INE");
+            removerMiniatura('btnCarro', "🚗 Tomar Foto del Carro / Placas");
         }
     }
 
+    function removerMiniatura(btnId, textoOriginal) {
+        const btn = document.getElementById(btnId);
+        btn.className = "btn btn-foto";
+        btn.innerHTML = `<span>${textoOriginal}</span>`;
+    }
+
     // =====================================================
-    // CAPTURA NATIVA DE EVIDENCIAS
+    // CAPTURA NATIVA DE EVIDENCIAS Y MUESTRA DE IMAGEN
     // =====================================================
     function capturarEvidencia(tipo) {
         tipoEvidenciaActual = tipo;
@@ -309,25 +361,31 @@
 
         const reader = new FileReader();
         reader.onload = function(event) {
-            const base64String = event.target.result.split(',')[1];
+            const completeBase64 = event.target.result;
+            const base64String = completeBase64.split(',')[1];
             
             if (tipoEvidenciaActual === 'ine') {
                 fotosCapturadas.ine = base64String;
-                const btn = document.getElementById('btnIne');
-                btn.className = "btn btn-foto capturada";
-                btn.innerText = "🪪 INE Capturada con Éxito ✅";
+                desplegarMiniatura('btnIne', completeBase64, "🪪 INE Capturada con Éxito ✅");
             } else if (tipoEvidenciaActual === 'carro') {
                 fotosCapturadas.carro = base64String;
-                const btn = document.getElementById('btnCarro');
-                btn.className = "btn btn-foto capturada";
-                btn.innerText = "🚗 Vehículo Capturado con Éxito ✅";
+                desplegarMiniatura('btnCarro', completeBase64, "🚗 Vehículo Capturado con Éxito ✅");
             }
         };
         reader.readAsDataURL(file);
     });
 
+    function desplegarMiniatura(btnId, imgSrc, textoStatus) {
+        const btn = document.getElementById(btnId);
+        btn.className = "btn btn-foto capturada";
+        btn.innerHTML = `
+            <span>${textoStatus}</span>
+            <img src="${imgSrc}" class="img-preview" alt="Vista previa">
+        `;
+    }
+
     // =====================================================
-    // ENVÍO DE DATOS HACIA GOOGLE SPREADSHEETS
+    // ENVÍO DE DATOS HACIA GOOGLE SPREADSHEETS (CON SPINNER)
     // =====================================================
     function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
@@ -341,7 +399,8 @@
             return;
         }
 
-        alert("Enviando registro y subiendo imágenes a la base de datos IBEA, por favor espere...");
+        // 2. Encender overlay animado de CARGANDO en lugar de la alerta estática
+        document.getElementById('loadingOverlay').style.display = 'flex';
 
         const formData = new URLSearchParams();
         formData.append("calleDestino", datosPaseActual.calle);
@@ -357,23 +416,35 @@
             body: formData.toString()
         })
         .then(() => {
+            // Apagar overlay antes de mostrar el éxito
+            document.getElementById('loadingOverlay').style.display = 'none';
             alert("🎉 ¡Entrada Guardada! La pluma de caseta se ha autorizado.");
-            regresarAlEscaner();
+            
+            // 3. Activar automáticamente la cámara para el siguiente escaneo
+            regresarAlEscaner(true);
         })
         .catch(err => {
+            document.getElementById('loadingOverlay').style.display = 'none';
             console.error(err);
             alert("Error al conectar con la base de datos, revise la señal del equipo.");
         });
     }
 
-    function regresarAlEscaner() {
+    // Parametro "forzarCamara": si es true, enciende el lente trasero de inmediato
+    function regresarAlEscaner(forzarCamara) {
         document.getElementById('panelEvidencias').style.display = 'none';
         document.getElementById('wrapperEscaner').style.display = 'block';
         document.getElementById('areaControlesCamara').style.display = 'none';
-        document.getElementById('btnIniciar').style.display = 'block';
+        
         datosPaseActual = null;
         if (html5QrcodeScanner) {
             html5QrcodeScanner.clear();
+        }
+
+        if (forzarCamara) {
+            iniciarEscaner();
+        } else {
+            document.getElementById('btnIniciar').style.display = 'block';
         }
     }
 
@@ -381,13 +452,11 @@
     // DETECCIÓN AUTOMÁTICA AL ABRIR EL ENLACE DIRECTO
     // =====================================================
     function verificarDatosAlCargar() {
-        // Si la URL actual contiene parámetros (ej. ?t=r&n=...), los procesa de inmediato sin pedir activar la cámara
         if (window.location.search) {
             procesarUrlPase(window.location.href);
         }
     }
 
-    // Ejecutar automáticamente en cuanto el árbol DOM esté completamente listo
     window.addEventListener('DOMContentLoaded', verificarDatosAlCargar);
 </script>
 
