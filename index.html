@@ -95,7 +95,7 @@
         <h2 id="tituloHeader">Caseta: Escáner IBEA</h2>
         
         <div class="cam-controls" id="areaControlesCamara" style="display: none;">
-            <button class="btn btn-secondary" style="padding: 8px; font-size: 13px; margin: 0;" onclick="alternarCamara()">🔄 Cambiar Lente Trasera</button>
+            <button class="btn btn-secondary" style="padding: 8px; font-size: 13px; margin: 0;" onclick="alternarCamara()">🔄 Cambiar Lente/Cámara</button>
         </div>
 
         <div id="reader"></div>
@@ -130,6 +130,7 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
+    // URL de tu Apps Script (Viene en tus capturas del doPOST)
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzom1lSxqtJouPi8JpsTpQoEjtK1faKM70HQNDELzmdtA53LWP0bElyPzOmdRd1f_ka/exec";
 
     let html5QrcodeScanner = null;
@@ -140,43 +141,34 @@
     let tipoEvidenciaActual = '';
 
     // =====================================================
-    // FILTRADO EXCLUSIVO PARA QUITAR SOLO LAS FRONTALES
+    // INICIALIZACIÓN INTELIGENTE DE CÁMARAS TRASERAS
     // =====================================================
     function iniciarEscaner() {
         document.getElementById('btnIniciar').style.display = 'none';
         
         Html5Qrcode.getCameras().then(devices => {
             if (devices && devices.length > 0) {
-                // Quitamos única y exclusivamente las que digan explícitamente "front" o "selfie"
-                camarasDisponibles = devices.filter(device => {
-                    const label = device.label.toLowerCase();
-                    return !(label.includes('front') || label.includes('delantera') || label.includes('selfie') || label.includes('user'));
-                });
-
-                // Respaldo de seguridad por si no venían etiquetadas
-                if (camarasDisponibles.length === 0) {
-                    camarasDisponibles = devices;
-                }
-
-                // Intentamos que empiece por la trasera que se vea mejor (no-ultra-wide)
+                camarasDisponibles = devices;
+                
+                // Intentamos buscar una cámara que explícitamente mencione "back", "trasera" o "main"
+                // Para evitar que seleccione por defecto el lente Gran Angular lejano
                 let indiceOptimo = 0;
-                for (let i = 0; i < camarasDisponibles.length; i++) {
-                    const label = camarasDisponibles[i].label.toLowerCase();
-                    if (label.includes('back') || label.includes('trasera') || label.includes('main') || label.includes('principal')) {
-                        if (!label.includes('wide') && !label.includes('angular') && !label.includes('macro')) {
+                for (let i = 0; i < devices.length; i++) {
+                    const nombreCamara = devices[i].label.toLowerCase();
+                    if (nombreCamara.includes('back') || nombreCamara.includes('trasera') || nombreCamara.includes('main') || nombreCamara.includes('principal')) {
+                        // Evitamos lentes que se identifiquen explícitamente como wide, ultra-wide o angular
+                        if (!nombreCamara.includes('wide') && !nombreCamara.includes('angular')) {
                             indiceOptimo = i;
                             break;
                         }
                     }
                 }
                 
+                // Si encontramos un lente principal adecuado, empezamos con ese
                 indiceCamaraActual = indiceOptimo;
                 
-                // Habilitamos el botón de cambio si quedan 2 o más lentes traseras/principales
                 if (camarasDisponibles.length > 1) {
                     document.getElementById('areaControlesCamara').style.display = 'block';
-                } else {
-                    document.getElementById('areaControlesCamara').style.display = 'none';
                 }
                 
                 encenderLente(camarasDisponibles[indiceCamaraActual].id);
@@ -206,6 +198,7 @@
     function montarLente(cameraId) {
         html5QrcodeScanner = new Html5Qrcode("reader");
         
+        // Configuramos una zona de escaneo cuadrada equilibrada y optimizada para enfoque
         html5QrcodeScanner.start(
             cameraId,
             {
@@ -219,7 +212,7 @@
         });
     }
 
-    // Alterna de forma circular entre las diferentes lentes traseras del celular
+    // Permite al guardia alternar manualmente si cae en la cámara incorrecta
     function alternarCamara() {
         if (camarasDisponibles.length <= 1) return;
         indiceCamaraActual = (indiceCamaraActual + 1) % camarasDisponibles.length;
@@ -231,6 +224,7 @@
     // =====================================================
     function onScanSuccess(decodedText, decodedResult) {
         try {
+            // Detenemos el escáner inmediatamente para que no siga leyendo en bucle
             html5QrcodeScanner.stop().then(() => {
                 procesarUrlPase(decodedText);
             }).catch(() => {
@@ -242,7 +236,7 @@
     }
 
     function onScanFailure(error) {
-        // Silencioso para rendimiento óptimo
+        // Silencioso para evitar alertas en consola cada milisegundo mientras busca el QR
     }
 
     function procesarUrlPase(urlTexto) {
@@ -252,6 +246,7 @@
             return;
         }
 
+        // Extraer parámetros de la URL del QR generado
         const urlParams = new URLSearchParams(urlTexto.substring(urlTexto.indexOf("?")));
         const tipo = urlParams.get("t");
         const nombre = urlParams.get("n");
@@ -265,6 +260,7 @@
             return;
         }
 
+        // Validación de Firma Básica para evitar pases alterados manualmente
         const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
         const hashEsperado = btoa(stringFirma).replace(/=/g, "");
 
@@ -276,10 +272,12 @@
 
         datosPaseActual = { tipo, nombre, calle, numero };
 
+        // Si es Residente entra directo (puedes ajustar si requieres evidencia también)
         if (tipo === 'r') {
             alert(`✅ ACCESO DE RESIDENTE VÁLIDO\n\nBienvenido de vuelta:\n🏠 Domicilio: ${calle} #${numero}`);
             regresarAlEscaner();
         } else {
+            // Si es visita, desplegamos el panel para recolectar INE y placas
             document.getElementById('wrapperEscaner').style.display = 'none';
             document.getElementById('panelEvidencias').style.display = 'block';
             
@@ -287,6 +285,7 @@
             document.getElementById('evNumero').value = numero;
             document.getElementById('evNombre').value = "";
             
+            // Reiniciar botones de fotos
             fotosCapturadas = { ine: null, carro: null };
             document.getElementById('btnIne').className = "btn btn-foto";
             document.getElementById('btnIne').innerText = "🪪 Tomar Foto de la INE";
@@ -296,10 +295,12 @@
     }
 
     // =====================================================
-    // CAPTURA NATIVA DE EVIDENCIAS
+    // CAPTURA NATIVA DE EVIDENCIAS EN PANTALLA COMPLETA
     // =====================================================
     function capturarEvidencia(tipo) {
         tipoEvidenciaActual = tipo;
+        // Gatillamos el input file oculto configurado con capture="environment"
+        // Esto abre la app nativa de la cámara del cel a resolución completa y zoom correcto
         document.getElementById('inputCamaraNativa').click();
     }
 
@@ -343,6 +344,7 @@
 
         alert("Enviando registro y subiendo imágenes a la base de datos IBEA, por favor espere...");
 
+        // Estructura limpia para tu doPost de Apps Script
         const formData = new URLSearchParams();
         formData.append("calleDestino", datosPaseActual.calle);
         formData.append("numeroDestino", datosPaseActual.numero);
@@ -352,7 +354,7 @@
 
         fetch(WEB_APP_URL, {
             method: "POST",
-            mode: "no-cors",
+            mode: "no-cors", // Para evitar bloqueos CORS cruzados comunes de Google
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: formData.toString()
         })
