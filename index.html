@@ -165,7 +165,6 @@
         </div>
 
         <div id="reader"></div>
-        
         <button id="btnIniciar" class="btn btn-primary" style="display: none;" onclick="iniciarEscaner()">Activar Cámara de Caseta</button>
     </div>
 
@@ -364,7 +363,7 @@
             
             const ahora = new Date();
             const fechaString = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const horaString = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const horaString = Pattern = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('resFechaHora').innerText = `${fechaString} a las ${horaString}`;
             
         } else {
@@ -458,27 +457,11 @@
             
             alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
             
-            if (window.history.pushState) {
-                const nuevaUrl = window.location.origin + window.location.pathname;
-                window.history.pushState({path:nuevaUrl}, '', nuevaUrl);
-            }
-
-            // BLINDAJE DE PRIVACIDAD: Forzamos la destrucción completa del lector para limpiar cualquier bloqueo interno
-            if(html5QrcodeScanner) {
-                html5QrcodeScanner.clear();
-                html5QrcodeScanner = null;
-            }
-            // Restauramos el contenedor limpio desde cero en el DOM
-            document.getElementById('reader').innerHTML = "";
-
-            document.getElementById('panelEvidencias').style.display = 'none';
-            document.getElementById('panelResidente').style.display = 'none';
-            document.getElementById('wrapperEscaner').style.display = 'block';
-            document.getElementById('areaControlesCamara').style.display = 'none';
-            datosPaseActual = null;
+            // MARCADOR DE REINICIO DE CÁMARA (Lógica Calle Aguilar 1151)
+            localStorage.setItem('ejecutarCamaraAlCargar', 'true');
             
-            // Levantamos el lente de forma limpia y directa bajo el hilo del botón Aceptar
-            iniciarEscaner();
+            // Limpieza absoluta de la URL refrescando la sesión de forma nativa
+            window.location.href = window.location.origin + window.location.pathname;
         })
         .catch(err => {
             document.getElementById('loadingOverlay').style.display = 'none';
@@ -491,11 +474,6 @@
         if (forzarCamara) {
             window.location.href = window.location.origin + window.location.pathname;
         } else {
-            if(html5QrcodeScanner) {
-                html5QrcodeScanner.clear();
-                html5QrcodeScanner = null;
-            }
-            document.getElementById('reader').innerHTML = "";
             document.getElementById('panelEvidencias').style.display = 'none';
             document.getElementById('panelResidente').style.display = 'none';
             document.getElementById('wrapperEscaner').style.display = 'block';
@@ -509,6 +487,11 @@
         if (window.location.search) {
             procesarUrlPase(window.location.href);
         } else {
+            // Evaluamos si venimos saliendo de guardar un registro exitoso
+            const debeArrancarCamara = localStorage.getItem('ejecutarCamaraAlCargar');
+            if (debeArrancarCamara === 'true') {
+                localStorage.removeItem('ejecutarCamaraAlCargar'); // Limpiamos la bandera
+            }
             iniciarEscaner();
         }
     }
