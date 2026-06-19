@@ -152,7 +152,7 @@
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <div class="loading-text">SINCRO-REGISTRO EN HOJA...</div>
+    <div class="loading-text">GUARDANDO EN HOJA DE CÁLCULO...</div>
 </div>
 
 <div class="container">
@@ -221,7 +221,6 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
-    // URL Activa vinculada a tu Apps Script
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbysNDnhR4cWOiL16TWmTdivjKQmhkXpd1NhKVksi4kMrnxQG3TbjJS4X6ypfOs6y0WQ/exec";
 
     let html5QrcodeScanner = null;
@@ -436,6 +435,7 @@
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
+        // Empaquetamos todo en el JSON para enviarlo de forma segura
         const jsonCompleto = {
             calle: calleDestino,
             numero: numeroDestino,
@@ -455,7 +455,7 @@
         .then(() => {
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
-                alert("🎉 ¡Entrada Guardada con Éxito! El registro se ha enviado a la base de datos.");
+                alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
                 regresarAlEscaner(true);
             }, 1500);
         })
@@ -466,7 +466,6 @@
         });
     }
 
-    // CORRECCIÓN CLAVE: El refresco de página solventa el bloqueo de hilos de cámara de Chrome
     function regresarAlEscaner(forzarCamara) {
         if (forzarCamara) {
             window.location.reload();
