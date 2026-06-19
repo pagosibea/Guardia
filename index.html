@@ -3,303 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Acceso Caseta - IBEA</title>
+    <title>Caseta: Escáner IBEA</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #1e272e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e2530;
             color: #ffffff;
             margin: 0;
             padding: 15px;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
         .container {
             width: 100%;
-            max-width: 500px;
-            background: #2f3640;
+            max-width: 450px;
+            background: #2a3444;
+            border-radius: 16px;
             padding: 20px;
-            border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            text-align: center;
             box-sizing: border-box;
         }
-        h2 { text-align: center; margin-top: 0; color: #f5f6fa; font-size: 22px; }
-        
+        h2 {
+            margin-top: 0;
+            font-size: 24px;
+            color: #f1f5f9;
+            margin-bottom: 20px;
+        }
         #reader {
             width: 100%;
-            border-radius: 8px;
+            background: #111827;
+            border-radius: 12px;
             overflow: hidden;
-            border: 2px dashed #718093;
-            background: #22272e;
-            display: none; /* Oculto por defecto, solo se usa si no hay datos en la URL */
+            border: 2px solid #4b5563;
+            margin-bottom: 15px;
         }
-        
-        #reader__dashboard_section_csr, #reader__status_span { display: none !important; }
-        #reader button {
-            background-color: #3498db; color: white; border: none; padding: 12px;
-            border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin: 10px 0;
-        }
-
-        .result-screen {
-            display: none;
-            margin-top: 20px;
-            padding: 25px;
-            border-radius: 10px;
-            text-align: center;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .status-title { font-size: 26px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
-        .status-desc { font-size: 16px; line-height: 1.4; margin-bottom: 15px; }
-        
-        .bg-verde { background-color: #2ecc71; color: #fff; }
-        .bg-naranja { background-color: #e67e22; color: #fff; }
-        .bg-rojo { background-color: #e74c3c; color: #fff; }
-        .bg-azul { background-color: #3498db; color: #fff; }
-        .bg-error { background-color: #7f8c8d; color: #fff; }
-
-        .capture-form {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
+        .btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
             border-radius: 8px;
-            margin-top: 15px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s ease;
+        }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-secondary { background: #4b5563; color: white; }
+        .btn-secondary:hover { background: #374151; }
+        
+        /* Contenedores de captura de evidencias */
+        .panel-visita {
+            background: #3b82f6;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 10px;
             text-align: left;
         }
+        .panel-visita h3 { margin-top: 0; text-align: center; font-size: 22px; }
+        .panel-visita p { text-align: center; font-size: 14px; margin-bottom: 15px; }
         .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #f5f6fa; }
-        .form-group input {
-            width: 100%; padding: 10px; border: none; border-radius: 5px;
-            box-sizing: border-box; font-size: 15px; background: #fff; color: #333;
+        .form-group label { display: block; font-size: 13px; margin-bottom: 4px; font-weight: 600; }
+        .form-group input { width: 100%; padding: 10px; border-radius: 6px; border: none; box-sizing: border-box; font-size: 15px; }
+        
+        .btn-foto {
+            background: #1f2937; color: #f9fafb; border: 2px dashed #9ca3af; display: flex;
+            align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;
         }
-        .form-group input[readonly] { background: #dcdde1; color: #2f3640; font-weight: bold; }
+        .btn-foto.capturada { border: 2px solid #10b981; background: #064e3b; }
 
-        .camera-btn-wrapper {
-            position: relative; margin-bottom: 15px; background: #2f3640;
-            border: 2px dashed #fff; border-radius: 6px; padding: 12px; text-align: center; cursor: pointer;
+        /* Controles de cámara adicionales */
+        .cam-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
         }
-        .camera-btn-wrapper input[type="file"] {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
-        }
-        .camera-label { font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .preview-img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 5px; margin-top: 8px; display: none; }
-
-        .btn {
-            width: 100%; padding: 14px; border: none; border-radius: 6px;
-            font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s;
-        }
-        .btn-submit { background-color: #2ecc71; color: white; text-transform: uppercase; }
-        .btn-submit:disabled { background-color: #95a5a6; cursor: not-allowed; }
-        .btn-reset { background-color: #7f8c8d; color: white; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Caseta: Control IBEA</h2>
-    
-    <div id="reader"></div>
-    
-    <div id="resultScreen" class="result-screen">
-        <div id="statusTitle" class="status-title">Estatus</div>
-        <div id="statusDesc" class="status-desc">Detalles del escaneo.</div>
+    <div id="wrapperEscaner">
+        <h2 id="tituloHeader">Caseta: Escáner IBEA</h2>
         
-        <div id="visitaFormContainer" style="display: none;">
-            <div class="capture-form">
-                <div class="form-group">
-                    <label>Calle Destino</label>
-                    <input type="text" id="formCalle" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Número Destino</label>
-                    <input type="text" id="formNumero" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Nombre del Visitante</label>
-                    <input type="text" id="formNombre" placeholder="Escribe el nombre de la INE">
-                </div>
-
-                <div class="camera-btn-wrapper">
-                    <div class="camera-label">🪪 Tomar Foto de la INE</div>
-                    <input type="file" id="camIne" accept="image/*" capture="environment" onchange="procesarFoto(this, 'previewIne')">
-                    <img id="previewIne" class="preview-img">
-                </div>
-
-                <div class="camera-btn-wrapper">
-                    <div class="camera-label">🚗 Tomar Foto del Carro / Placas</div>
-                    <input type="file" id="camCarro" accept="image/*" capture="environment" onchange="procesarFoto(this, 'previewCarro')">
-                    <img id="previewCarro" class="preview-img">
-                </div>
-
-                <button id="btnEnviarRegistro" class="btn btn-submit" onclick="enviarRegistroAExcel()">Guardar Entrada</button>
-            </div>
+        <div class="cam-controls" id="areaControlesCamara" style="display: none;">
+            <button class="btn btn-secondary" style="padding: 8px; font-size: 13px; margin: 0;" onclick="alternarCamara()">🔄 Cambiar Lente/Cámara</button>
         </div>
 
-        <button class="btn btn-reset" onclick="reiniciarEscaner()">🔄 Escanear Siguiente</button>
+        <div id="reader"></div>
+        <button id="btnIniciar" class="btn btn-primary" onclick="iniciarEscaner()">Activar Cámara de Caseta</button>
+    </div>
+
+    <div id="panelEvidencias" class="panel-visita" style="display: none;">
+        <h3>PASE DE VISITA VÁLIDO</h3>
+        <p>Toma las evidencias correspondientes abajo para abrir la pluma.</p>
+        
+        <div class="form-group">
+            <label>Calle Destino</label>
+            <input type="text" id="evCalle" readonly>
+        </div>
+        <div class="form-group">
+            <label>Número Destino</label>
+            <input type="text" id="evNumero" readonly>
+        </div>
+        <div class="form-group">
+            <label>Nombre del Visitante</label>
+            <input type="text" id="evNombre" placeholder="Escribe el nombre de la INE">
+        </div>
+
+        <button class="btn btn-foto" id="btnIne" onclick="capturarEvidencia('ine')">🪪 Tomar Foto de la INE</button>
+        <button class="btn btn-foto" id="btnCarro" onclick="capturarEvidencia('carro')">🚗 Tomar Foto del Carro / Placas</button>
+
+        <button class="btn btn-success" style="margin-top: 15px;" onclick="guardarEntradaCaseta()">GUARDAR ENTRADA</button>
+        <button class="btn btn-secondary" onclick="regresarAlEscaner()">🔄 Escanear Siguiente</button>
     </div>
 </div>
 
+<input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
+
 <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzom1ISxqtJouPi8JpsTpQoEjtK1faKM70HQNDELzmdtA53LWP0bElyPzOmdRd1f_ka/exec";
+    // URL de tu Apps Script (Viene en tus capturas del doPOST)
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzom1lSxqtJouPi8JpsTpQoEjtK1faKM70HQNDELzmdtA53LWP0bElyPzOmdRd1f_ka/exec";
 
-    let html5Qrcode;
-    let datosFotosBase64 = { fotoIne: null, fotoCarro: null };
+    let html5QrcodeScanner = null;
+    let camarasDisponibles = [];
+    let indiceCamaraActual = 0;
+    let datosPaseActual = null;
+    let fotosCapturadas = { ine: null, carro: null };
+    let tipoEvidenciaActual = '';
 
-    // Función principal que decide si procesa los datos del link o activa la cámara
-    function verificarRutaDeEntrada() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const tipo = urlParams.get("t");
-
-        // SI LA URL YA TRAE DATOS (El guardia escaneó el QR desde afuera con su cel)
-        if (tipo) {
-            procesarDatosDeURL(urlParams);
-        } else {
-            // SI LA URL ESTÁ VACÍA (Entró directo a la web o es el siguiente escaneo)
-            activarEscanerEnPantalla();
-        }
-    }
-
-    // Lee los datos directo del enlace saltándose el escáner interno
-    function procesarDatosDeURL(params) {
-        const tipo = params.get("t");
-        const nombre = params.get("n") || "";
-        const calle = params.get("c") || "";
-        const numero = params.get("num") || "";
-        const hashRecibido = params.get("h") || "";
-
-        const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
-        const hashCalculado = btoa(stringFirma).replace(/=/g, "");
-
-        if (hashRecibido !== hashCalculado) {
-            mostrarPantalla("bg-rojo", "QR INVÁLIDO", "Este código QR no pertenece al sistema original de Ibea.");
-            return;
-        }
-
-        if (tipo === "r") {
-            mostrarPantalla("bg-verde", "ACCESO AUTORIZADO", `RESIDENTE: AL CORRIENTE<br><br><strong>Propietario:</strong> ${nombre}<br><strong>Domicilio:</strong> ${calle} #${numero}`);
-        } else if (tipo === "v") {
-            mostrarPantalla("bg-azul", "PASE DE VISITA VÁLIDO", `Domicilio: ${calle} #${numero}<br>Llena los datos abajo para permitir el acceso.`);
-            
-            document.getElementById("formCalle").value = calle;
-            document.getElementById("formNumero").value = numero;
-            document.getElementById("formNombre").value = "";
-            document.getElementById("previewIne").style.display = "none";
-            document.getElementById("previewCarro").style.display = "none";
-            datosFotosBase64 = { fotoIne: null, fotoCarro: null };
-            
-            document.getElementById("visitaFormContainer").style.display = "block";
-        } else {
-            mostrarPantalla("bg-error", "QR NO RECONOCIDO", "Formato no compatible.");
-        }
-    }
-
-    // Solo se activa si el guardia necesita usar el escáner interno de la app
-    function activarEscanerEnPantalla() {
-        document.getElementById("resultScreen").style.display = "none";
-        document.getElementById("reader").style.display = "block";
+    // =====================================================
+    // INICIALIZACIÓN INTELIGENTE DE CÁMARAS TRASERAS
+    // =====================================================
+    function iniciarEscaner() {
+        document.getElementById('btnIniciar').style.display = 'none';
         
-        html5Qrcode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        
-        html5Qrcode.start(
-            { facingMode: "environment" },
-            config,
-            (decodedText) => {
-                html5Qrcode.stop().then(() => {
-                    const urlObj = new URL(decodedText);
-                    procesarDatosDeURL(urlObj.searchParams);
-                }).catch(() => {
-                    const urlObj = new URL(decodedText);
-                    procesarDatosDeURL(urlObj.searchParams);
-                });
-            },
-            () => {}
-        ).catch(err => console.log("Cámara lista."));
-    }
-
-    function mostrarPantalla(claseBg, titulo, descripcion) {
-        document.getElementById("reader").style.display = "none";
-        const screen = document.getElementById("resultScreen");
-        screen.className = "result-screen " + claseBg;
-        document.getElementById("statusTitle").innerText = titulo;
-        document.getElementById("statusDesc").innerHTML = descripcion;
-        document.getElementById("visitaFormContainer").style.display = "none";
-        screen.style.display = "block";
-    }
-
-    function procesarFoto(input, idPreview) {
-        if (input.files && input.files[0]) {
-            const lector = new FileReader();
-            lector.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement("canvas");
-                    const maxAncho = 800;
-                    const escala = maxAncho / img.width;
-                    canvas.width = maxAncho;
-                    canvas.height = img.height * escala;
-                    
-                    const ctx = canvas.getContext("2d");
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
-                    const base64Comprimido = canvas.toDataURL("image/jpeg", 0.7).split(",")[1];
-                    
-                    if (idPreview === 'previewIne') datosFotosBase64.fotoIne = { base64: base64Comprimido };
-                    if (idPreview === 'previewCarro') datosFotosBase64.fotoCarro = { base64: base64Comprimido };
-
-                    const preview = document.getElementById(idPreview);
-                    preview.src = canvas.toDataURL("image/jpeg", 0.7);
-                    preview.style.display = "block";
-                };
-                img.src = e.target.result;
-            };
-            lector.readAsDataURL(input.files[0]);
-        }
-    }
-
-    function enviarRegistroAExcel() {
-        const btn = document.getElementById("btnEnviarRegistro");
-        const nombreVisita = document.getElementById("formNombre").value.trim();
-        const calle = document.getElementById("formCalle").value;
-        const numero = document.getElementById("formNumero").value;
-
-        if(!nombreVisita) {
-            alert("Por favor escribe el nombre de la visita.");
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerText = "Guardando en Excel...";
-
-        const urlEnvio = `${WEB_APP_URL}?calle=${encodeURIComponent(calle)}&numero=${encodeURIComponent(numero)}&nombre=${encodeURIComponent(nombreVisita)}`;
-
-        fetch(urlEnvio, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(datosFotosBase64)
-        })
-        .then(() => {
-            alert("¡Registro guardado con éxito!");
-            reiniciarEscaner();
-        })
-        .catch(err => {
-            alert("Error al guardar: " + err);
-            btn.disabled = false;
-            btn.innerText = "Guardar Entrada";
+        Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length > 0) {
+                camarasDisponibles = devices;
+                
+                // Intentamos buscar una cámara que explícitamente mencione "back", "trasera" o "main"
+                // Para evitar que seleccione por defecto el lente Gran Angular lejano
+                let indiceOptimo = 0;
+                for (let i = 0; i < devices.length; i++) {
+                    const nombreCamara = devices[i].label.toLowerCase();
+                    if (nombreCamara.includes('back') || nombreCamara.includes('trasera') || nombreCamara.includes('main') || nombreCamara.includes('principal')) {
+                        // Evitamos lentes que se identifiquen explícitamente como wide, ultra-wide o angular
+                        if (!nombreCamara.includes('wide') && !nombreCamara.includes('angular')) {
+                            indiceOptimo = i;
+                            break;
+                        }
+                    }
+                }
+                
+                // Si encontramos un lente principal adecuado, empezamos con ese
+                indiceCamaraActual = indiceOptimo;
+                
+                if (camarasDisponibles.length > 1) {
+                    document.getElementById('areaControlesCamara').style.display = 'block';
+                }
+                
+                encenderLente(camarasDisponibles[indiceCamaraActual].id);
+            } else {
+                alert("No se detectaron cámaras en este dispositivo.");
+                document.getElementById('btnIniciar').style.display = 'block';
+            }
+        }).catch(err => {
+            console.error("Error al listar cámaras:", err);
+            alert("Error al acceder a los permisos de la cámara.");
+            document.getElementById('btnIniciar').style.display = 'block';
         });
     }
 
-    function reiniciarEscaner() {
-        // Limpiamos los parámetros de la barra de direcciones para que no vuelva a cargar la misma casa
-        window.history.replaceState({}, document.title, window.location.pathname);
-        activarEscanerEnPantalla();
+    function encenderLente(cameraId) {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.stop().then(() => {
+                montarLente(cameraId);
+            }).catch(() => {
+                montarLente(cameraId);
+            });
+        } else {
+            montarLente(cameraId);
+        }
     }
 
-    // Arranca revisando si viene de un escaneo externo
-    window.onload = verificarRutaDeEntrada;
+    function montarLente(cameraId) {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        
+        // Configuramos una zona de escaneo cuadrada equilibrada y optimizada para enfoque
+        html5QrcodeScanner.start(
+            cameraId,
+            {
+                fps: 15,
+                qrbox: { width: 250, height: 250 }
+            },
+            onScanSuccess,
+            onScanFailure
+        ).catch(err => {
+            console.error("Error al iniciar cámara seleccionada:", err);
+        });
+    }
+
+    // Permite al guardia alternar manualmente si cae en la cámara incorrecta
+    function alternarCamara() {
+        if (camarasDisponibles.length <= 1) return;
+        indiceCamaraActual = (indiceCamaraActual + 1) % camarasDisponibles.length;
+        encenderLente(camarasDisponibles[indiceCamaraActual].id);
+    }
+
+    // =====================================================
+    // PROCESAMIENTO DEL CÓDIGO QR ESCANEADO
+    // =====================================================
+    function onScanSuccess(decodedText, decodedResult) {
+        try {
+            // Detenemos el escáner inmediatamente para que no siga leyendo en bucle
+            html5QrcodeScanner.stop().then(() => {
+                procesarUrlPase(decodedText);
+            }).catch(() => {
+                procesarUrlPase(decodedText);
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function onScanFailure(error) {
+        // Silencioso para evitar alertas en consola cada milisegundo mientras busca el QR
+    }
+
+    function procesarUrlPase(urlTexto) {
+        if (!urlTexto.includes("?")) {
+            alert("❌ Código QR Inválido o desconocido.");
+            regresarAlEscaner();
+            return;
+        }
+
+        // Extraer parámetros de la URL del QR generado
+        const urlParams = new URLSearchParams(urlTexto.substring(urlTexto.indexOf("?")));
+        const tipo = urlParams.get("t");
+        const nombre = urlParams.get("n");
+        const calle = urlParams.get("c");
+        const numero = urlParams.get("num");
+        const hash = urlParams.get("h");
+
+        if (!calle || !numero || !hash) {
+            alert("❌ Datos de acceso corruptos o QR impreciso.");
+            regresarAlEscaner();
+            return;
+        }
+
+        // Validación de Firma Básica para evitar pases alterados manualmente
+        const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
+        const hashEsperado = btoa(stringFirma).replace(/=/g, "");
+
+        if (hash !== hashEsperado) {
+            alert("🚨 ¡ALERTA! Código QR falsificado o firma de seguridad inválida.");
+            regresarAlEscaner();
+            return;
+        }
+
+        datosPaseActual = { tipo, nombre, calle, numero };
+
+        // Si es Residente entra directo (puedes ajustar si requieres evidencia también)
+        if (tipo === 'r') {
+            alert(`✅ ACCESO DE RESIDENTE VÁLIDO\n\nBienvenido de vuelta:\n🏠 Domicilio: ${calle} #${numero}`);
+            regresarAlEscaner();
+        } else {
+            // Si es visita, desplegamos el panel para recolectar INE y placas
+            document.getElementById('wrapperEscaner').style.display = 'none';
+            document.getElementById('panelEvidencias').style.display = 'block';
+            
+            document.getElementById('evCalle').value = calle;
+            document.getElementById('evNumero').value = numero;
+            document.getElementById('evNombre').value = "";
+            
+            // Reiniciar botones de fotos
+            fotosCapturadas = { ine: null, carro: null };
+            document.getElementById('btnIne').className = "btn btn-foto";
+            document.getElementById('btnIne').innerText = "🪪 Tomar Foto de la INE";
+            document.getElementById('btnCarro').className = "btn btn-foto";
+            document.getElementById('btnCarro').innerText = "🚗 Tomar Foto del Carro / Placas";
+        }
+    }
+
+    // =====================================================
+    // CAPTURA NATIVA DE EVIDENCIAS EN PANTALLA COMPLETA
+    // =====================================================
+    function capturarEvidencia(tipo) {
+        tipoEvidenciaActual = tipo;
+        // Gatillamos el input file oculto configurado con capture="environment"
+        // Esto abre la app nativa de la cámara del cel a resolución completa y zoom correcto
+        document.getElementById('inputCamaraNativa').click();
+    }
+
+    document.getElementById('inputCamaraNativa').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const base64String = event.target.result.split(',')[1];
+            
+            if (tipoEvidenciaActual === 'ine') {
+                fotosCapturadas.ine = base64String;
+                const btn = document.getElementById('btnIne');
+                btn.className = "btn btn-foto capturada";
+                btn.innerText = "🪪 INE Capturada con Éxito ✅";
+            } else if (tipoEvidenciaActual === 'carro') {
+                fotosCapturadas.carro = base64String;
+                const btn = document.getElementById('btnCarro');
+                btn.className = "btn btn-foto capturada";
+                btn.innerText = "🚗 Vehículo Capturado con Éxito ✅";
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // =====================================================
+    // ENVÍO DE DATOS HACIA GOOGLE SPREADSHEETS
+    // =====================================================
+    function guardarEntradaCaseta() {
+        const nombreVisitante = document.getElementById('evNombre').value.trim();
+
+        if (!nombreVisitante) {
+            alert("⚠️ Por favor escribe el nombre del visitante.");
+            return;
+        }
+        if (!fotosCapturadas.ine) {
+            alert("⚠️ Hace falta tomar la fotografía de la INE.");
+            return;
+        }
+
+        alert("Enviando registro y subiendo imágenes a la base de datos IBEA, por favor espere...");
+
+        // Estructura limpia para tu doPost de Apps Script
+        const formData = new URLSearchParams();
+        formData.append("calleDestino", datosPaseActual.calle);
+        formData.append("numeroDestino", datosPaseActual.numero);
+        formData.append("nombreVisitante", nombreVisitante);
+        formData.append("fotoIne", fotosCapturadas.ine);
+        formData.append("fotoCarro", fotosCapturadas.carro || "");
+
+        fetch(WEB_APP_URL, {
+            method: "POST",
+            mode: "no-cors", // Para evitar bloqueos CORS cruzados comunes de Google
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData.toString()
+        })
+        .then(() => {
+            alert("🎉 ¡Entrada Guardada! La pluma de caseta se ha autorizado.");
+            regresarAlEscaner();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Error al conectar con la base de datos, revise la señal del equipo.");
+        });
+    }
+
+    function regresarAlEscaner() {
+        document.getElementById('panelEvidencias').style.display = 'none';
+        document.getElementById('wrapperEscaner').style.display = 'block';
+        document.getElementById('areaControlesCamara').style.display = 'none';
+        document.getElementById('btnIniciar').style.display = 'block';
+        datosPaseActual = null;
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear();
+        }
+    }
 </script>
+
 </body>
 </html>
