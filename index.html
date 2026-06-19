@@ -152,7 +152,7 @@
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <div class="loading-text">GUARDANDO EN HOJA DE CÁLCULO...</div>
+    <div class="loading-text">SINCRO-REGISTRO EN HOJA...</div>
 </div>
 
 <div class="container">
@@ -221,6 +221,7 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
+    // RECUERDA: Si generaste una nueva implementación del script, pega la nueva URL aquí abajo
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbysNDnhR4cWOiL16TWmTdivjKQmhkXpd1NhKVksi4kMrnxQG3TbjJS4X6ypfOs6y0WQ/exec";
 
     let html5QrcodeScanner = null;
@@ -278,7 +279,7 @@
     function encenderLente(cameraId) {
         if (html5QrcodeScanner) {
             html5QrcodeScanner.stop().then(() => {
-                setTimeout(() => montarLente(cameraId), 300); // Pequeña pausa para liberar hardware viejo
+                setTimeout(() => montarLente(cameraId), 300);
             }).catch(() => {
                 setTimeout(() => montarLente(cameraId), 300);
             });
@@ -289,18 +290,13 @@
 
     function montarLente(cameraId) {
         html5QrcodeScanner = new Html5Qrcode("reader");
-        
         html5QrcodeScanner.start(
             cameraId,
-            {
-                fps: 15,
-                qrbox: { width: 250, height: 250 }
-            },
+            { fps: 15, qrbox: { width: 250, height: 250 } },
             onScanSuccess,
             onScanFailure
         ).catch(err => {
             console.error("Error al iniciar cámara seleccionada:", err);
-            // Reintento automático suave si el hardware estaba ocupado
             setTimeout(() => {
                  html5QrcodeScanner.start(cameraId, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure).catch(e => console.log("Fallo reintento"));
             }, 500);
@@ -315,11 +311,8 @@
 
     function onScanSuccess(decodedText, decodedResult) {
         try {
-            // Detenemos el escáner y esperamos que la promesa se resuelva con éxito antes de abrir los paneles
             html5QrcodeScanner.stop().then(() => {
-                setTimeout(() => {
-                    procesarUrlPase(decodedText);
-                }, 200); // Delay crítico para que el sistema operativo libere el lente
+                setTimeout(() => { procesarUrlPase(decodedText); }, 200);
             }).catch(() => {
                 procesarUrlPase(decodedText);
             });
@@ -427,6 +420,7 @@
         `;
     }
 
+    // SOLUCIÓN TOTAL: Se introduce texto y base64 juntos en un único JSON enviado al cuerpo
     function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
         const calleDestino = document.getElementById('evCalle').value.trim();
@@ -443,25 +437,27 @@
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
-        const cuerpoDatos = {
+        // Empaquetamos absolutamente todo en la carga útil (payload body)
+        const jsonCompleto = {
+            calle: calleDestino,
+            numero: numeroDestino,
+            nombre: nombreVisitante,
             fotoIne: { base64: fotosCapturadas.ine },
             fotoCarro: fotosCapturadas.carro ? { base64: fotosCapturadas.carro } : null
         };
 
-        const urlPeticion = `${WEB_APP_URL}?calle=${encodeURIComponent(calleDestino)}&numero=${encodeURIComponent(numeroDestino)}&nombre=${encodeURIComponent(nombreVisitante)}`;
-
-        fetch(urlPeticion, {
+        fetch(WEB_APP_URL, {
             method: "POST",
             mode: "no-cors",
             headers: {
                 "Content-Type": "text/plain;charset=utf-8"
             },
-            body: JSON.stringify(cuerpoDatos)
+            body: JSON.stringify(jsonCompleto)
         })
         .then(() => {
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
-                alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
+                alert("🎉 ¡Entrada Guardada con Éxito! Datos e imágenes vinculados.");
                 regresarAlEscaner(true);
             }, 1500);
         })
@@ -477,16 +473,12 @@
         document.getElementById('panelResidente').style.display = 'none';
         document.getElementById('wrapperEscaner').style.display = 'block';
         document.getElementById('areaControlesCamara').style.display = 'none';
-        
         datosPaseActual = null;
         
         if (html5QrcodeScanner) {
             html5QrcodeScanner.clear().then(() => {
-                if (forzarCamara) {
-                    setTimeout(() => { iniciarEscaner(); }, 400);
-                } else {
-                    document.getElementById('btnIniciar').style.display = 'block';
-                }
+                if (forzarCamara) setTimeout(() => { iniciarEscaner(); }, 400);
+                else document.getElementById('btnIniciar').style.display = 'block';
             }).catch(() => {
                 if (forzarCamara) iniciarEscaner();
                 else document.getElementById('btnIniciar').style.display = 'block';
