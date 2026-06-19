@@ -221,7 +221,7 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
-    // RECUERDA: Si generaste una nueva implementación del script, pega la nueva URL aquí abajo
+    // URL Activa vinculada a tu Apps Script
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbysNDnhR4cWOiL16TWmTdivjKQmhkXpd1NhKVksi4kMrnxQG3TbjJS4X6ypfOs6y0WQ/exec";
 
     let html5QrcodeScanner = null;
@@ -420,7 +420,6 @@
         `;
     }
 
-    // SOLUCIÓN TOTAL: Se introduce texto y base64 juntos en un único JSON enviado al cuerpo
     function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
         const calleDestino = document.getElementById('evCalle').value.trim();
@@ -437,7 +436,6 @@
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
-        // Empaquetamos absolutamente todo en la carga útil (payload body)
         const jsonCompleto = {
             calle: calleDestino,
             numero: numeroDestino,
@@ -457,7 +455,7 @@
         .then(() => {
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
-                alert("🎉 ¡Entrada Guardada con Éxito! Datos e imágenes vinculados.");
+                alert("🎉 ¡Entrada Guardada con Éxito! El registro se ha enviado a la base de datos.");
                 regresarAlEscaner(true);
             }, 1500);
         })
@@ -468,24 +466,25 @@
         });
     }
 
+    // CORRECCIÓN CLAVE: El refresco de página solventa el bloqueo de hilos de cámara de Chrome
     function regresarAlEscaner(forzarCamara) {
-        document.getElementById('panelEvidencias').style.display = 'none';
-        document.getElementById('panelResidente').style.display = 'none';
-        document.getElementById('wrapperEscaner').style.display = 'block';
-        document.getElementById('areaControlesCamara').style.display = 'none';
-        datosPaseActual = null;
-        
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.clear().then(() => {
-                if (forzarCamara) setTimeout(() => { iniciarEscaner(); }, 400);
-                else document.getElementById('btnIniciar').style.display = 'block';
-            }).catch(() => {
-                if (forzarCamara) iniciarEscaner();
-                else document.getElementById('btnIniciar').style.display = 'block';
-            });
+        if (forzarCamara) {
+            window.location.reload();
         } else {
-            if (forzarCamara) iniciarEscaner();
-            else document.getElementById('btnIniciar').style.display = 'block';
+            document.getElementById('panelEvidencias').style.display = 'none';
+            document.getElementById('panelResidente').style.display = 'none';
+            document.getElementById('wrapperEscaner').style.display = 'block';
+            document.getElementById('areaControlesCamara').style.display = 'none';
+            datosPaseActual = null;
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().then(() => {
+                    document.getElementById('btnIniciar').style.display = 'block';
+                }).catch(() => {
+                    document.getElementById('btnIniciar').style.display = 'block';
+                });
+            } else {
+                document.getElementById('btnIniciar').style.display = 'block';
+            }
         }
     }
 
