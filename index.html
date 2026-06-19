@@ -128,6 +128,29 @@
             font-weight: 600;
             font-family: sans-serif;
         }
+
+        /* NUEVA: Tarjeta Estética de Acceso Residente */
+        .panel-residente {
+            background: #10b981;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 10px;
+            text-align: center;
+            border: 2px solid #047857;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+        }
+        .panel-residente h3 { margin-top: 0; font-size: 24px; color: #ffffff; letter-spacing: 1px; }
+        .badge-verificado {
+            background: #ffffff; color: #10b981; padding: 4px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 15px;
+        }
+        .residente-info-card {
+            background: #064e3b; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 15px;
+        }
+        .residente-info-row { margin-bottom: 10px; }
+        .residente-info-row:last-child { margin-bottom: 0; }
+        .residente-label { font-size: 12px; color: #a7f3d0; display: block; font-weight: 600; text-transform: uppercase; }
+        .residente-val { font-size: 16px; color: #ffffff; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -147,6 +170,28 @@
 
         <div id="reader"></div>
         <button id="btnIniciar" class="btn btn-primary" onclick="iniciarEscaner()">Activar Cámara de Caseta</button>
+    </div>
+
+    <div id="panelResidente" class="panel-residente" style="display: none;">
+        <h3>ACCESO AUTORIZADO</h3>
+        <div class="badge-verificado">✓ RESIDENTE ACTIVO</div>
+        
+        <div class="residente-info-card">
+            <div class="residente-info-row">
+                <span class="residente-label">Propietario / Residente</span>
+                <span id="resNombre" class="residente-val">-</span>
+            </div>
+            <div class="residente-info-row">
+                <span class="residente-label">Domicilio</span>
+                <span id="resDomicilio" class="residente-val">-</span>
+            </div>
+            <div class="residente-info-row">
+                <span class="residente-label">Validación de Acceso</span>
+                <span id="resFechaHora" class="residente-val" style="color: #fef08a;">-</span>
+            </div>
+        </div>
+
+        <button class="btn btn-success" style="background: #ffffff; color: #064e3b;" onclick="regresarAlEscaner(true)">ACEPTAR Y CONTINUAR</button>
     </div>
 
     <div id="panelEvidencias" class="panel-visita" style="display: none;">
@@ -323,9 +368,22 @@
         datosPaseActual = { tipo, nombre, calle, numero };
 
         if (tipo === 'r') {
-            alert(`✅ ACCESO DE RESIDENTE VÁLIDO\n\nBienvenido de vuelta:\n🏠 Domicilio: ${calle} #${numero}`);
-            regresarAlEscaner(true);
+            // Ocultar escáner y desplegar TARJETA ESTÉTICA DE RESIDENTE
+            document.getElementById('wrapperEscaner').style.display = 'none';
+            document.getElementById('panelResidente').style.display = 'block';
+            
+            // Llenar información dinámica en la tarjeta
+            document.getElementById('resNombre').innerText = nombre ? decodeURIComponent(nombre) : "PROPIETARIO REGISTRADO";
+            document.getElementById('resDomicilio').innerText = `${calle} #${numero}`;
+            
+            // Estampar la fecha y hora exacta del instante de escaneo
+            const ahora = new Date();
+            const fechaString = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const horaString = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('resFechaHora').innerText = `${fechaString} a las ${horaString}`;
+            
         } else {
+            // Flujo normal de visitante
             document.getElementById('wrapperEscaner').style.display = 'none';
             document.getElementById('panelEvidencias').style.display = 'block';
             
@@ -334,8 +392,6 @@
             document.getElementById('evNombre').value = "";
             
             fotosCapturadas = { ine: null, carro: null };
-            
-            // Limpiar vistas previas previas si existían
             removerMiniatura('btnIne', "🪪 Tomar Foto de la INE");
             removerMiniatura('btnCarro', "🚗 Tomar Foto del Carro / Placas");
         }
@@ -399,7 +455,6 @@
             return;
         }
 
-        // 2. Encender overlay animado de CARGANDO en lugar de la alerta estática
         document.getElementById('loadingOverlay').style.display = 'flex';
 
         const formData = new URLSearchParams();
@@ -416,11 +471,8 @@
             body: formData.toString()
         })
         .then(() => {
-            // Apagar overlay antes de mostrar el éxito
             document.getElementById('loadingOverlay').style.display = 'none';
             alert("🎉 ¡Entrada Guardada! La pluma de caseta se ha autorizado.");
-            
-            // 3. Activar automáticamente la cámara para el siguiente escaneo
             regresarAlEscaner(true);
         })
         .catch(err => {
@@ -430,9 +482,10 @@
         });
     }
 
-    // Parametro "forzarCamara": si es true, enciende el lente trasero de inmediato
+    // Cierra cualquier panel activo y reactiva de forma automática la cámara trasera
     function regresarAlEscaner(forzarCamara) {
         document.getElementById('panelEvidencias').style.display = 'none';
+        document.getElementById('panelResidente').style.display = 'none';
         document.getElementById('wrapperEscaner').style.display = 'block';
         document.getElementById('areaControlesCamara').style.display = 'none';
         
