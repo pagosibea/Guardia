@@ -435,7 +435,6 @@
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
-        // Empaquetamos todo en el JSON para enviarlo de forma segura
         const jsonCompleto = {
             calle: calleDestino,
             numero: numeroDestino,
@@ -456,6 +455,7 @@
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
                 alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
+                // REFLOW CORREGIDO: Al dar "Aceptar" forzamos recarga directa a la cámara
                 regresarAlEscaner(true);
             }, 1500);
         })
