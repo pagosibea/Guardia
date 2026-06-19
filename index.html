@@ -165,6 +165,7 @@
         </div>
 
         <div id="reader"></div>
+        
         <button id="btnIniciar" class="btn btn-primary" style="display: none;" onclick="iniciarEscaner()">Activar Cámara de Caseta</button>
     </div>
 
@@ -453,11 +454,8 @@
             body: JSON.stringify(jsonCompleto)
         })
         .then(() => {
-            // Quitamos el setTimeout de aquí para ocultar el overlay de inmediato
             document.getElementById('loadingOverlay').style.display = 'none';
             
-            // Al ejecutarse el alert de forma síncrona, el navegador vincula 
-            // el clic de "Aceptar" directamente con el arranque de la cámara.
             alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
             
             if (window.history.pushState) {
@@ -465,12 +463,21 @@
                 window.history.pushState({path:nuevaUrl}, '', nuevaUrl);
             }
 
+            // BLINDAJE DE PRIVACIDAD: Forzamos la destrucción completa del lector para limpiar cualquier bloqueo interno
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+                html5QrcodeScanner = null;
+            }
+            // Restauramos el contenedor limpio desde cero en el DOM
+            document.getElementById('reader').innerHTML = "";
+
             document.getElementById('panelEvidencias').style.display = 'none';
             document.getElementById('panelResidente').style.display = 'none';
             document.getElementById('wrapperEscaner').style.display = 'block';
             document.getElementById('areaControlesCamara').style.display = 'none';
             datosPaseActual = null;
             
+            // Levantamos el lente de forma limpia y directa bajo el hilo del botón Aceptar
             iniciarEscaner();
         })
         .catch(err => {
@@ -484,6 +491,11 @@
         if (forzarCamara) {
             window.location.href = window.location.origin + window.location.pathname;
         } else {
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+                html5QrcodeScanner = null;
+            }
+            document.getElementById('reader').innerHTML = "";
             document.getElementById('panelEvidencias').style.display = 'none';
             document.getElementById('panelResidente').style.display = 'none';
             document.getElementById('wrapperEscaner').style.display = 'block';
