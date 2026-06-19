@@ -140,27 +140,243 @@
     let tipoEvidenciaActual = '';
 
     // =====================================================
-    // FILTRADO EXCLUSIVO DE CÁMARAS TRASERAS
+    // FILTRADO EXCLUSIVO PARA QUITAR SOLO LAS FRONTALES
     // =====================================================
     function iniciarEscaner() {
         document.getElementById('btnIniciar').style.display = 'none';
         
         Html5Qrcode.getCameras().then(devices => {
             if (devices && devices.length > 0) {
-                // Filtramos la lista eliminando de raíz cualquier cámara frontal/selfie
+                // Quitamos única y exclusivamente las que digan explícitamente "front" o "selfie"
                 camarasDisponibles = devices.filter(device => {
                     const label = device.label.toLowerCase();
                     return !(label.includes('front') || label.includes('delantera') || label.includes('selfie') || label.includes('user'));
                 });
 
-                // Si por alguna razón el filtro vacía la lista (ej. el navegador no da las etiquetas), usamos todas por respaldo
+                // Respaldo de seguridad por si no venían etiquetadas
                 if (camarasDisponibles.length === 0) {
                     camarasDisponibles = devices;
                 }
 
-                // Intentamos buscar la mejor lente trasera principal (que no sea gran angular ni macro)
+                // Intentamos que empiece por la trasera que se vea mejor (no-ultra-wide)
                 let indiceOptimo = 0;
                 for (let i = 0; i < camarasDisponibles.length; i++) {
                     const label = camarasDisponibles[i].label.toLowerCase();
                     if (label.includes('back') || label.includes('trasera') || label.includes('main') || label.includes('principal')) {
-                        if (!label.includes('
+                        if (!label.includes('wide') && !label.includes('angular') && !label.includes('macro')) {
+                            indiceOptimo = i;
+                            break;
+                        }
+                    }
+                }
+                
+                indiceCamaraActual = indiceOptimo;
+                
+                // Habilitamos el botón de cambio si quedan 2 o más lentes traseras/principales
+                if (camarasDisponibles.length > 1) {
+                    document.getElementById('areaControlesCamara').style.display = 'block';
+                } else {
+                    document.getElementById('areaControlesCamara').style.display = 'none';
+                }
+                
+                encenderLente(camarasDisponibles[indiceCamaraActual].id);
+            } else {
+                alert("No se detectaron cámaras en este dispositivo.");
+                document.getElementById('btnIniciar').style.display = 'block';
+            }
+        }).catch(err => {
+            console.error("Error al listar cámaras:", err);
+            alert("Error al acceder a los permisos de la cámara.");
+            document.getElementById('btnIniciar').style.display = 'block';
+        });
+    }
+
+    function encenderLente(cameraId) {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.stop().then(() => {
+                montarLente(cameraId);
+            }).catch(() => {
+                montarLente(cameraId);
+            });
+        } else {
+            montarLente(cameraId);
+        }
+    }
+
+    function montarLente(cameraId) {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        
+        html5QrcodeScanner.start(
+            cameraId,
+            {
+                fps: 15,
+                qrbox: { width: 250, height: 250 }
+            },
+            onScanSuccess,
+            onScanFailure
+        ).catch(err => {
+            console.error("Error al iniciar cámara seleccionada:", err);
+        });
+    }
+
+    // Alterna de forma circular entre las diferentes lentes traseras del celular
+    function alternarCamara() {
+        if (camarasDisponibles.length <= 1) return;
+        indiceCamaraActual = (indiceCamaraActual + 1) % camarasDisponibles.length;
+        encenderLente(camarasDisponibles[indiceCamaraActual].id);
+    }
+
+    // =====================================================
+    // PROCESAMIENTO DEL CÓDIGO QR ESCANEADO
+    // =====================================================
+    function onScanSuccess(decodedText, decodedResult) {
+        try {
+            html5QrcodeScanner.stop().then(() => {
+                procesarUrlPase(decodedText);
+            }).catch(() => {
+                procesarUrlPase(decodedText);
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function onScanFailure(error) {
+        // Silencioso para rendimiento óptimo
+    }
+
+    function procesarUrlPase(urlTexto) {
+        if (!urlTexto.includes("?")) {
+            alert("❌ Código QR Inválido o desconocido.");
+            regresarAlEscaner();
+            return;
+        }
+
+        const urlParams = new URLSearchParams(urlTexto.substring(urlTexto.indexOf("?")));
+        const tipo = urlParams.get("t");
+        const nombre = urlParams.get("n");
+        const calle = urlParams.get("c");
+        const numero = urlParams.get("num");
+        const hash = urlParams.get("h");
+
+        if (!calle || !numero || !hash) {
+            alert("❌ Datos de acceso corruptos o QR impreciso.");
+            regresarAlEscaner();
+            return;
+        }
+
+        const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
+        const hashEsperado = btoa(stringFirma).replace(/=/g, "");
+
+        if (hash !== hashEsperado) {
+            alert("🚨 ¡ALERTA! Código QR falsificado o firma de seguridad inválida.");
+            regresarAlEscaner();
+            return;
+        }
+
+        datosPaseActual = { tipo, nombre, calle, numero };
+
+        if (tipo === 'r') {
+            alert(`✅ ACCESO DE RESIDENTE VÁLIDO\n\nBienvenido de vuelta:\n🏠 Domicilio: ${calle} #${numero}`);
+            regresarAlEscaner();
+        } else {
+            document.getElementById('wrapperEscaner').style.display = 'none';
+            document.getElementById('panelEvidencias').style.display = 'block';
+            
+            document.getElementById('evCalle').value = calle;
+            document.getElementById('evNumero').value = numero;
+            document.getElementById('evNombre').value = "";
+            
+            fotosCapturadas = { ine: null, carro: null };
+            document.getElementById('btnIne').className = "btn btn-foto";
+            document.getElementById('btnIne').innerText = "🪪 Tomar Foto de la INE";
+            document.getElementById('btnCarro').className = "btn btn-foto";
+            document.getElementById('btnCarro').innerText = "🚗 Tomar Foto del Carro / Placas";
+        }
+    }
+
+    // =====================================================
+    // CAPTURA NATIVA DE EVIDENCIAS
+    // =====================================================
+    function capturarEvidencia(tipo) {
+        tipoEvidenciaActual = tipo;
+        document.getElementById('inputCamaraNativa').click();
+    }
+
+    document.getElementById('inputCamaraNativa').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const base64String = event.target.result.split(',')[1];
+            
+            if (tipoEvidenciaActual === 'ine') {
+                fotosCapturadas.ine = base64String;
+                const btn = document.getElementById('btnIne');
+                btn.className = "btn btn-foto capturada";
+                btn.innerText = "🪪 INE Capturada con Éxito ✅";
+            } else if (tipoEvidenciaActual === 'carro') {
+                fotosCapturadas.carro = base64String;
+                const btn = document.getElementById('btnCarro');
+                btn.className = "btn btn-foto capturada";
+                btn.innerText = "🚗 Vehículo Capturado con Éxito ✅";
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // =====================================================
+    // ENVÍO DE DATOS HACIA GOOGLE SPREADSHEETS
+    // =====================================================
+    function guardarEntradaCaseta() {
+        const nombreVisitante = document.getElementById('evNombre').value.trim();
+
+        if (!nombreVisitante) {
+            alert("⚠️ Por favor escribe el nombre del visitante.");
+            return;
+        }
+        if (!fotosCapturadas.ine) {
+            alert("⚠️ Hace falta tomar la fotografía de la INE.");
+            return;
+        }
+
+        alert("Enviando registro y subiendo imágenes a la base de datos IBEA, por favor espere...");
+
+        const formData = new URLSearchParams();
+        formData.append("calleDestino", datosPaseActual.calle);
+        formData.append("numeroDestino", datosPaseActual.numero);
+        formData.append("nombreVisitante", nombreVisitante);
+        formData.append("fotoIne", fotosCapturadas.ine);
+        formData.append("fotoCarro", fotosCapturadas.carro || "");
+
+        fetch(WEB_APP_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData.toString()
+        })
+        .then(() => {
+            alert("🎉 ¡Entrada Guardada! La pluma de caseta se ha autorizado.");
+            regresarAlEscaner();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Error al conectar con la base de datos, revise la señal del equipo.");
+        });
+    }
+
+    function regresarAlEscaner() {
+        document.getElementById('panelEvidencias').style.display = 'none';
+        document.getElementById('wrapperEscaner').style.display = 'block';
+        document.getElementById('areaControlesCamara').style.display = 'none';
+        document.getElementById('btnIniciar').style.display = 'block';
+        datosPaseActual = null;
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear();
+        }
+    }
+</script>
+
+</body>
+</html>
