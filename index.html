@@ -120,9 +120,10 @@
         }
         .loading-text {
             color: #ffffff;
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 20px;
+            font-weight: bold;
             font-family: sans-serif;
+            letter-spacing: 1px;
         }
 
         .panel-residente {
@@ -152,7 +153,7 @@
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <div class="loading-text">Guardando en Hoja de Cálculo...</div>
+    <div class="loading-text">GUARDANDO</div>
 </div>
 
 <div class="container">
@@ -455,8 +456,6 @@
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
                 alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
-                
-                // REDIRECCIÓN COMPLETA: Forzamos la limpieza de la URL para que regrese en automático al inicio
                 window.location.href = window.location.origin + window.location.pathname;
             }, 1500);
         })
@@ -476,16 +475,14 @@
             document.getElementById('wrapperEscaner').style.display = 'block';
             document.getElementById('areaControlesCamara').style.display = 'none';
             datosPaseActual = null;
-            iniciarEscaner(); // Inicia la cámara automáticamente aquí también
+            iniciarEscaner();
         }
     }
 
     function verificarDatosAlCargar() {
         if (window.location.search) {
-            // Si la URL contiene parámetros (?t=v...), procesa el pase escaneado
             procesarUrlPase(window.location.href);
         } else {
-            // MODIFICACIÓN CLAVE: Si la URL está limpia, ENCIENDE LA CÁMARA EN AUTOMÁTICO de inmediato
             iniciarEscaner();
         }
     }
