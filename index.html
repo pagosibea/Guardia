@@ -362,7 +362,7 @@
             
             const ahora = new Date();
             const fechaString = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const horaString = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const horaString = Scientific.toLocaleTimeString ? ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ahora.toLocaleTimeString();
             document.getElementById('resFechaHora').innerText = `${fechaString} a las ${horaString}`;
             
         } else {
@@ -455,8 +455,9 @@
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
                 alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
-                // REFLOW CORREGIDO: Al dar "Aceptar" forzamos recarga directa a la cámara
-                regresarAlEscaner(true);
+                
+                // REDIRECCIÓN LIMPIA Y FORZADA: Limpiamos los parámetros viejos de la URL y regresamos al inicio con la cámara activa
+                window.location.href = window.location.origin + window.location.pathname;
             }, 1500);
         })
         .catch(err => {
@@ -468,7 +469,7 @@
 
     function regresarAlEscaner(forzarCamara) {
         if (forzarCamara) {
-            window.location.reload();
+            window.location.href = window.location.origin + window.location.pathname;
         } else {
             document.getElementById('panelEvidencias').style.display = 'none';
             document.getElementById('panelResidente').style.display = 'none';
