@@ -152,7 +152,7 @@
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <div class="loading-text">Guardando</div>
+    <div class="loading-text">Guardando en Hoja de Cálculo...</div>
 </div>
 
 <div class="container">
@@ -164,7 +164,7 @@
         </div>
 
         <div id="reader"></div>
-        <button id="btnIniciar" class="btn btn-primary" onclick="iniciarEscaner()">Activar Cámara de Caseta</button>
+        <button id="btnIniciar" class="btn btn-primary" style="display: none;" onclick="iniciarEscaner()">Activar Cámara de Caseta</button>
     </div>
 
     <div id="panelResidente" class="panel-residente" style="display: none;">
@@ -362,7 +362,7 @@
             
             const ahora = new Date();
             const fechaString = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const horaString = Scientific.toLocaleTimeString ? ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ahora.toLocaleTimeString();
+            const horaString = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('resFechaHora').innerText = `${fechaString} a las ${horaString}`;
             
         } else {
@@ -456,7 +456,7 @@
                 document.getElementById('loadingOverlay').style.display = 'none';
                 alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
                 
-                // REDIRECCIÓN LIMPIA Y FORZADA: Limpiamos los parámetros viejos de la URL y regresamos al inicio con la cámara activa
+                // REDIRECCIÓN COMPLETA: Forzamos la limpieza de la URL para que regrese en automático al inicio
                 window.location.href = window.location.origin + window.location.pathname;
             }, 1500);
         })
@@ -476,21 +476,17 @@
             document.getElementById('wrapperEscaner').style.display = 'block';
             document.getElementById('areaControlesCamara').style.display = 'none';
             datosPaseActual = null;
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().then(() => {
-                    document.getElementById('btnIniciar').style.display = 'block';
-                }).catch(() => {
-                    document.getElementById('btnIniciar').style.display = 'block';
-                });
-            } else {
-                document.getElementById('btnIniciar').style.display = 'block';
-            }
+            iniciarEscaner(); // Inicia la cámara automáticamente aquí también
         }
     }
 
     function verificarDatosAlCargar() {
         if (window.location.search) {
+            // Si la URL contiene parámetros (?t=v...), procesa el pase escaneado
             procesarUrlPase(window.location.href);
+        } else {
+            // MODIFICACIÓN CLAVE: Si la URL está limpia, ENCIENDE LA CÁMARA EN AUTOMÁTICO de inmediato
+            iniciarEscaner();
         }
     }
 
