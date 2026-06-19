@@ -95,7 +95,7 @@
         <h2 id="tituloHeader">Caseta: Escáner IBEA</h2>
         
         <div class="cam-controls" id="areaControlesCamara" style="display: none;">
-            <button class="btn btn-secondary" style="padding: 8px; font-size: 13px; margin: 0;" onclick="alternarCamara()">🔄 Cambiar Lente/Cámara</button>
+            <button class="btn btn-secondary" style="padding: 8px; font-size: 13px; margin: 0;" onclick="alternarCamara()">🔄 Cambiar Lente Trasera</button>
         </div>
 
         <div id="reader"></div>
@@ -130,7 +130,6 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
-    // URL de tu Apps Script (Viene en tus capturas del doPOST)
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzom1lSxqtJouPi8JpsTpQoEjtK1faKM70HQNDELzmdtA53LWP0bElyPzOmdRd1f_ka/exec";
 
     let html5QrcodeScanner = null;
@@ -141,244 +140,27 @@
     let tipoEvidenciaActual = '';
 
     // =====================================================
-    // INICIALIZACIÓN INTELIGENTE DE CÁMARAS TRASERAS
+    // FILTRADO EXCLUSIVO DE CÁMARAS TRASERAS
     // =====================================================
     function iniciarEscaner() {
         document.getElementById('btnIniciar').style.display = 'none';
         
         Html5Qrcode.getCameras().then(devices => {
             if (devices && devices.length > 0) {
-                camarasDisponibles = devices;
-                
-                // Intentamos buscar una cámara que explícitamente mencione "back", "trasera" o "main"
-                // Para evitar que seleccione por defecto el lente Gran Angular lejano
+                // Filtramos la lista eliminando de raíz cualquier cámara frontal/selfie
+                camarasDisponibles = devices.filter(device => {
+                    const label = device.label.toLowerCase();
+                    return !(label.includes('front') || label.includes('delantera') || label.includes('selfie') || label.includes('user'));
+                });
+
+                // Si por alguna razón el filtro vacía la lista (ej. el navegador no da las etiquetas), usamos todas por respaldo
+                if (camarasDisponibles.length === 0) {
+                    camarasDisponibles = devices;
+                }
+
+                // Intentamos buscar la mejor lente trasera principal (que no sea gran angular ni macro)
                 let indiceOptimo = 0;
-                for (let i = 0; i < devices.length; i++) {
-                    const nombreCamara = devices[i].label.toLowerCase();
-                    if (nombreCamara.includes('back') || nombreCamara.includes('trasera') || nombreCamara.includes('main') || nombreCamara.includes('principal')) {
-                        // Evitamos lentes que se identifiquen explícitamente como wide, ultra-wide o angular
-                        if (!nombreCamara.includes('wide') && !nombreCamara.includes('angular')) {
-                            indiceOptimo = i;
-                            break;
-                        }
-                    }
-                }
-                
-                // Si encontramos un lente principal adecuado, empezamos con ese
-                indiceCamaraActual = indiceOptimo;
-                
-                if (camarasDisponibles.length > 1) {
-                    document.getElementById('areaControlesCamara').style.display = 'block';
-                }
-                
-                encenderLente(camarasDisponibles[indiceCamaraActual].id);
-            } else {
-                alert("No se detectaron cámaras en este dispositivo.");
-                document.getElementById('btnIniciar').style.display = 'block';
-            }
-        }).catch(err => {
-            console.error("Error al listar cámaras:", err);
-            alert("Error al acceder a los permisos de la cámara.");
-            document.getElementById('btnIniciar').style.display = 'block';
-        });
-    }
-
-    function encenderLente(cameraId) {
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.stop().then(() => {
-                montarLente(cameraId);
-            }).catch(() => {
-                montarLente(cameraId);
-            });
-        } else {
-            montarLente(cameraId);
-        }
-    }
-
-    function montarLente(cameraId) {
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        
-        // Configuramos una zona de escaneo cuadrada equilibrada y optimizada para enfoque
-        html5QrcodeScanner.start(
-            cameraId,
-            {
-                fps: 15,
-                qrbox: { width: 250, height: 250 }
-            },
-            onScanSuccess,
-            onScanFailure
-        ).catch(err => {
-            console.error("Error al iniciar cámara seleccionada:", err);
-        });
-    }
-
-    // Permite al guardia alternar manualmente si cae en la cámara incorrecta
-    function alternarCamara() {
-        if (camarasDisponibles.length <= 1) return;
-        indiceCamaraActual = (indiceCamaraActual + 1) % camarasDisponibles.length;
-        encenderLente(camarasDisponibles[indiceCamaraActual].id);
-    }
-
-    // =====================================================
-    // PROCESAMIENTO DEL CÓDIGO QR ESCANEADO
-    // =====================================================
-    function onScanSuccess(decodedText, decodedResult) {
-        try {
-            // Detenemos el escáner inmediatamente para que no siga leyendo en bucle
-            html5QrcodeScanner.stop().then(() => {
-                procesarUrlPase(decodedText);
-            }).catch(() => {
-                procesarUrlPase(decodedText);
-            });
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    function onScanFailure(error) {
-        // Silencioso para evitar alertas en consola cada milisegundo mientras busca el QR
-    }
-
-    function procesarUrlPase(urlTexto) {
-        if (!urlTexto.includes("?")) {
-            alert("❌ Código QR Inválido o desconocido.");
-            regresarAlEscaner();
-            return;
-        }
-
-        // Extraer parámetros de la URL del QR generado
-        const urlParams = new URLSearchParams(urlTexto.substring(urlTexto.indexOf("?")));
-        const tipo = urlParams.get("t");
-        const nombre = urlParams.get("n");
-        const calle = urlParams.get("c");
-        const numero = urlParams.get("num");
-        const hash = urlParams.get("h");
-
-        if (!calle || !numero || !hash) {
-            alert("❌ Datos de acceso corruptos o QR impreciso.");
-            regresarAlEscaner();
-            return;
-        }
-
-        // Validación de Firma Básica para evitar pases alterados manualmente
-        const stringFirma = calle.trim().toLowerCase() + "-" + numero.trim().toLowerCase();
-        const hashEsperado = btoa(stringFirma).replace(/=/g, "");
-
-        if (hash !== hashEsperado) {
-            alert("🚨 ¡ALERTA! Código QR falsificado o firma de seguridad inválida.");
-            regresarAlEscaner();
-            return;
-        }
-
-        datosPaseActual = { tipo, nombre, calle, numero };
-
-        // Si es Residente entra directo (puedes ajustar si requieres evidencia también)
-        if (tipo === 'r') {
-            alert(`✅ ACCESO DE RESIDENTE VÁLIDO\n\nBienvenido de vuelta:\n🏠 Domicilio: ${calle} #${numero}`);
-            regresarAlEscaner();
-        } else {
-            // Si es visita, desplegamos el panel para recolectar INE y placas
-            document.getElementById('wrapperEscaner').style.display = 'none';
-            document.getElementById('panelEvidencias').style.display = 'block';
-            
-            document.getElementById('evCalle').value = calle;
-            document.getElementById('evNumero').value = numero;
-            document.getElementById('evNombre').value = "";
-            
-            // Reiniciar botones de fotos
-            fotosCapturadas = { ine: null, carro: null };
-            document.getElementById('btnIne').className = "btn btn-foto";
-            document.getElementById('btnIne').innerText = "🪪 Tomar Foto de la INE";
-            document.getElementById('btnCarro').className = "btn btn-foto";
-            document.getElementById('btnCarro').innerText = "🚗 Tomar Foto del Carro / Placas";
-        }
-    }
-
-    // =====================================================
-    // CAPTURA NATIVA DE EVIDENCIAS EN PANTALLA COMPLETA
-    // =====================================================
-    function capturarEvidencia(tipo) {
-        tipoEvidenciaActual = tipo;
-        // Gatillamos el input file oculto configurado con capture="environment"
-        // Esto abre la app nativa de la cámara del cel a resolución completa y zoom correcto
-        document.getElementById('inputCamaraNativa').click();
-    }
-
-    document.getElementById('inputCamaraNativa').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const base64String = event.target.result.split(',')[1];
-            
-            if (tipoEvidenciaActual === 'ine') {
-                fotosCapturadas.ine = base64String;
-                const btn = document.getElementById('btnIne');
-                btn.className = "btn btn-foto capturada";
-                btn.innerText = "🪪 INE Capturada con Éxito ✅";
-            } else if (tipoEvidenciaActual === 'carro') {
-                fotosCapturadas.carro = base64String;
-                const btn = document.getElementById('btnCarro');
-                btn.className = "btn btn-foto capturada";
-                btn.innerText = "🚗 Vehículo Capturado con Éxito ✅";
-            }
-        };
-        reader.readAsDataURL(file);
-    });
-
-    // =====================================================
-    // ENVÍO DE DATOS HACIA GOOGLE SPREADSHEETS
-    // =====================================================
-    function guardarEntradaCaseta() {
-        const nombreVisitante = document.getElementById('evNombre').value.trim();
-
-        if (!nombreVisitante) {
-            alert("⚠️ Por favor escribe el nombre del visitante.");
-            return;
-        }
-        if (!fotosCapturadas.ine) {
-            alert("⚠️ Hace falta tomar la fotografía de la INE.");
-            return;
-        }
-
-        alert("Enviando registro y subiendo imágenes a la base de datos IBEA, por favor espere...");
-
-        // Estructura limpia para tu doPost de Apps Script
-        const formData = new URLSearchParams();
-        formData.append("calleDestino", datosPaseActual.calle);
-        formData.append("numeroDestino", datosPaseActual.numero);
-        formData.append("nombreVisitante", nombreVisitante);
-        formData.append("fotoIne", fotosCapturadas.ine);
-        formData.append("fotoCarro", fotosCapturadas.carro || "");
-
-        fetch(WEB_APP_URL, {
-            method: "POST",
-            mode: "no-cors", // Para evitar bloqueos CORS cruzados comunes de Google
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: formData.toString()
-        })
-        .then(() => {
-            alert("🎉 ¡Entrada Guardada! La pluma de caseta se ha autorizado.");
-            regresarAlEscaner();
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Error al conectar con la base de datos, revise la señal del equipo.");
-        });
-    }
-
-    function regresarAlEscaner() {
-        document.getElementById('panelEvidencias').style.display = 'none';
-        document.getElementById('wrapperEscaner').style.display = 'block';
-        document.getElementById('areaControlesCamara').style.display = 'none';
-        document.getElementById('btnIniciar').style.display = 'block';
-        datosPaseActual = null;
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.clear();
-        }
-    }
-</script>
-
-</body>
-</html>
+                for (let i = 0; i < camarasDisponibles.length; i++) {
+                    const label = camarasDisponibles[i].label.toLowerCase();
+                    if (label.includes('back') || label.includes('trasera') || label.includes('main') || label.includes('principal')) {
+                        if (!label.includes('
