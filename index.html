@@ -420,7 +420,7 @@
         `;
     }
 
-   function guardarEntradaCaseta() {
+    function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
         const calleDestino = document.getElementById('evCalle').value.trim();
         const numeroDestino = document.getElementById('evNumero').value.trim();
@@ -456,16 +456,13 @@
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
                 
-                // 1. Mostramos la alerta de confirmación
                 alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
                 
-                // 2. Limpiamos la URL estéticamente sin recargar la página para no romper los permisos de la cámara
                 if (window.history.pushState) {
                     const nuevaUrl = window.location.origin + window.location.pathname;
                     window.history.pushState({path:nuevaUrl}, '', nuevaUrl);
                 }
 
-                // 3. Regresamos visualmente al contenedor del escáner y encendemos el lente bajo el contexto del clic
                 document.getElementById('panelEvidencias').style.display = 'none';
                 document.getElementById('panelResidente').style.display = 'none';
                 document.getElementById('wrapperEscaner').style.display = 'block';
