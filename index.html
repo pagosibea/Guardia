@@ -60,7 +60,6 @@
         .btn-secondary { background: #4b5563; color: white; }
         .btn-secondary:hover { background: #374151; }
         
-        /* Contenedores de captura de evidencias */
         .panel-visita {
             background: #3b82f6;
             padding: 20px;
@@ -81,7 +80,6 @@
         }
         .btn-foto.capturada { border: 2px solid #10b981; background: #064e3b; }
 
-        /* Estilo para las vistas previas de las fotos capturadas */
         .img-preview {
             max-width: 100%;
             max-height: 150px;
@@ -91,14 +89,12 @@
             object-fit: contain;
         }
 
-        /* Controles de cámara adicionales */
         .cam-controls {
             display: flex;
             gap: 10px;
             margin-bottom: 10px;
         }
 
-        /* Pantalla / Spinner de carga superpuesta */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -129,7 +125,6 @@
             font-family: sans-serif;
         }
 
-        /* Tarjeta Estética de Acceso Residente */
         .panel-residente {
             background: #10b981;
             padding: 20px;
@@ -157,7 +152,7 @@
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <div class="loading-text">CARGANDO...</div>
+    <div class="loading-text">ENVIANDO REGISTRO...</div>
 </div>
 
 <div class="container">
@@ -226,7 +221,6 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
-    // URL de Google Apps Script vinculada correctamente
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbysNDnhR4cWOiL16TWmTdivjKQmhkXpd1NhKVksi4kMrnxQG3TbjJS4X6ypfOs6y0WQ/exec";
 
     let html5QrcodeScanner = null;
@@ -426,7 +420,7 @@
         `;
     }
 
-    // AJUSTADO: Envío idéntico a las necesidades del Script (Estructura JSON exacta)
+    // SOLUCIÓN TOTAL: Envío mixto (parámetros URL para texto + JSON stringificado en postData)
     function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
         const calleDestino = document.getElementById('evCalle').value.trim();
@@ -443,20 +437,20 @@
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
-        // Estructura JSON que procesa tu "JSON.parse(e.postData.contents)"
-        const cuerpoDatos = {
+        // 1. Tu Script lee las fotos desde el cuerpo usando JSON.parse(e.postData.contents)
+        const objetoFotos = {
             fotoIne: { base64: fotosCapturadas.ine },
             fotoCarro: fotosCapturadas.carro ? { base64: fotosCapturadas.carro } : null
         };
 
-        // Tu script requiere p.calle, p.numero y p.nombre mediante los parámetros URL tradicionales
-        const urlConParametros = `${WEB_APP_URL}?calle=${encodeURIComponent(calleDestino)}&numero=${encodeURIComponent(numeroDestino)}&nombre=${encodeURIComponent(nombreVisitante)}`;
+        // 2. Tu Script lee texto usando e.parameter (p.calle, p.numero, p.nombre)
+        const urlFinal = `${WEB_APP_URL}?calle=${encodeURIComponent(calleDestino)}&numero=${encodeURIComponent(numeroDestino)}&nombre=${encodeURIComponent(nombreVisitante)}`;
 
-        fetch(urlConParametros, {
+        // Usamos fetch nativo enviando el string de fotos directamente en el cuerpo
+        fetch(urlFinal, {
             method: "POST",
             mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(cuerpoDatos)
+            body: JSON.stringify(objetoFotos)
         })
         .then(() => {
             document.getElementById('loadingOverlay').style.display = 'none';
