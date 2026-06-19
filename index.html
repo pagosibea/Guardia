@@ -278,9 +278,9 @@
     function encenderLente(cameraId) {
         if (html5QrcodeScanner) {
             html5QrcodeScanner.stop().then(() => {
-                montarLente(cameraId);
+                setTimeout(() => montarLente(cameraId), 300); // Pequeña pausa para liberar hardware viejo
             }).catch(() => {
-                montarLente(cameraId);
+                setTimeout(() => montarLente(cameraId), 300);
             });
         } else {
             montarLente(cameraId);
@@ -300,6 +300,10 @@
             onScanFailure
         ).catch(err => {
             console.error("Error al iniciar cámara seleccionada:", err);
+            // Reintento automático suave si el hardware estaba ocupado
+            setTimeout(() => {
+                 html5QrcodeScanner.start(cameraId, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure).catch(e => console.log("Fallo reintento"));
+            }, 500);
         });
     }
 
@@ -311,8 +315,11 @@
 
     function onScanSuccess(decodedText, decodedResult) {
         try {
+            // Detenemos el escáner y esperamos que la promesa se resuelva con éxito antes de abrir los paneles
             html5QrcodeScanner.stop().then(() => {
-                procesarUrlPase(decodedText);
+                setTimeout(() => {
+                    procesarUrlPase(decodedText);
+                }, 200); // Delay crítico para que el sistema operativo libere el lente
             }).catch(() => {
                 procesarUrlPase(decodedText);
             });
@@ -420,7 +427,6 @@
         `;
     }
 
-    // AJUSTE CRÍTICO: Sincroniza la URL con los parámetros exactos requeridos por tu Apps Script
     function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
         const calleDestino = document.getElementById('evCalle').value.trim();
@@ -437,13 +443,11 @@
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
-        // Estructura JSON exacta esperada por tu comando: JSON.parse(e.postData.contents)
         const cuerpoDatos = {
             fotoIne: { base64: fotosCapturadas.ine },
             fotoCarro: fotosCapturadas.carro ? { base64: fotosCapturadas.carro } : null
         };
 
-        // Forzamos los parámetros exactos en la URL de la petición POST para p.calle, p.numero y p.nombre
         const urlPeticion = `${WEB_APP_URL}?calle=${encodeURIComponent(calleDestino)}&numero=${encodeURIComponent(numeroDestino)}&nombre=${encodeURIComponent(nombreVisitante)}`;
 
         fetch(urlPeticion, {
@@ -475,14 +479,21 @@
         document.getElementById('areaControlesCamara').style.display = 'none';
         
         datosPaseActual = null;
+        
         if (html5QrcodeScanner) {
-            html5QrcodeScanner.clear();
-        }
-
-        if (forzarCamara) {
-            iniciarEscaner();
+            html5QrcodeScanner.clear().then(() => {
+                if (forzarCamara) {
+                    setTimeout(() => { iniciarEscaner(); }, 400);
+                } else {
+                    document.getElementById('btnIniciar').style.display = 'block';
+                }
+            }).catch(() => {
+                if (forzarCamara) iniciarEscaner();
+                else document.getElementById('btnIniciar').style.display = 'block';
+            });
         } else {
-            document.getElementById('btnIniciar').style.display = 'block';
+            if (forzarCamara) iniciarEscaner();
+            else document.getElementById('btnIniciar').style.display = 'block';
         }
     }
 
