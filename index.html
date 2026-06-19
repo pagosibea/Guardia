@@ -453,24 +453,25 @@
             body: JSON.stringify(jsonCompleto)
         })
         .then(() => {
-            setTimeout(() => {
-                document.getElementById('loadingOverlay').style.display = 'none';
-                
-                alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
-                
-                if (window.history.pushState) {
-                    const nuevaUrl = window.location.origin + window.location.pathname;
-                    window.history.pushState({path:nuevaUrl}, '', nuevaUrl);
-                }
+            // Quitamos el setTimeout de aquí para ocultar el overlay de inmediato
+            document.getElementById('loadingOverlay').style.display = 'none';
+            
+            // Al ejecutarse el alert de forma síncrona, el navegador vincula 
+            // el clic de "Aceptar" directamente con el arranque de la cámara.
+            alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
+            
+            if (window.history.pushState) {
+                const nuevaUrl = window.location.origin + window.location.pathname;
+                window.history.pushState({path:nuevaUrl}, '', nuevaUrl);
+            }
 
-                document.getElementById('panelEvidencias').style.display = 'none';
-                document.getElementById('panelResidente').style.display = 'none';
-                document.getElementById('wrapperEscaner').style.display = 'block';
-                document.getElementById('areaControlesCamara').style.display = 'none';
-                datosPaseActual = null;
-                
-                iniciarEscaner(); 
-            }, 1500);
+            document.getElementById('panelEvidencias').style.display = 'none';
+            document.getElementById('panelResidente').style.display = 'none';
+            document.getElementById('wrapperEscaner').style.display = 'block';
+            document.getElementById('areaControlesCamara').style.display = 'none';
+            datosPaseActual = null;
+            
+            iniciarEscaner();
         })
         .catch(err => {
             document.getElementById('loadingOverlay').style.display = 'none';
