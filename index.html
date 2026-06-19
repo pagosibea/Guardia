@@ -129,7 +129,7 @@
             font-family: sans-serif;
         }
 
-        /* NUEVA: Tarjeta Estética de Acceso Residente */
+        /* Tarjeta Estética de Acceso Residente */
         .panel-residente {
             background: #10b981;
             padding: 20px;
@@ -226,7 +226,8 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzom1lSxqtJouPi8JpsTpQoEjtK1faKM70HQNDELzmdtA53LWP0bElyPzOmdRd1f_ka/exec";
+    // URL de Google Apps Script vinculada correctamente
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbysNDnhR4cWOiL16TWmTdivjKQmhkXpd1NhKVksi4kMrnxQG3TbjJS4X6ypfOs6y0WQ/exec";
 
     let html5QrcodeScanner = null;
     let camarasDisponibles = [];
@@ -235,9 +236,6 @@
     let fotosCapturadas = { ine: null, carro: null };
     let tipoEvidenciaActual = '';
 
-    // =====================================================
-    // FILTRADO EXCLUSIVO DE CÁMARAS TRASERAS
-    // =====================================================
     function iniciarEscaner() {
         document.getElementById('btnIniciar').style.display = 'none';
         
@@ -317,9 +315,6 @@
         encenderLente(camarasDisponibles[indiceCamaraActual].id);
     }
 
-    // =====================================================
-    // PROCESAMIENTO DEL CÓDIGO QR ESCANEADO
-    // =====================================================
     function onScanSuccess(decodedText, decodedResult) {
         try {
             html5QrcodeScanner.stop().then(() => {
@@ -332,9 +327,7 @@
         }
     }
 
-    function onScanFailure(error) {
-        // Silencioso para rendimiento óptimo
-    }
+    function onScanFailure(error) { }
 
     function procesarUrlPase(urlTexto) {
         if (!urlTexto.includes("?")) {
@@ -368,22 +361,18 @@
         datosPaseActual = { tipo, nombre, calle, numero };
 
         if (tipo === 'r') {
-            // Ocultar escáner y desplegar TARJETA ESTÉTICA DE RESIDENTE
             document.getElementById('wrapperEscaner').style.display = 'none';
             document.getElementById('panelResidente').style.display = 'block';
             
-            // Llenar información dinámica en la tarjeta
             document.getElementById('resNombre').innerText = nombre ? decodeURIComponent(nombre) : "PROPIETARIO REGISTRADO";
             document.getElementById('resDomicilio').innerText = `${calle} #${numero}`;
             
-            // Estampar la fecha y hora exacta del instante de escaneo
             const ahora = new Date();
             const fechaString = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const horaString = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('resFechaHora').innerText = `${fechaString} a las ${horaString}`;
             
         } else {
-            // Flujo normal de visitante
             document.getElementById('wrapperEscaner').style.display = 'none';
             document.getElementById('panelEvidencias').style.display = 'block';
             
@@ -403,9 +392,6 @@
         btn.innerHTML = `<span>${textoOriginal}</span>`;
     }
 
-    // =====================================================
-    // CAPTURA NATIVA DE EVIDENCIAS Y MUESTRA DE IMAGEN
-    // =====================================================
     function capturarEvidencia(tipo) {
         tipoEvidenciaActual = tipo;
         document.getElementById('inputCamaraNativa').click();
@@ -440,11 +426,11 @@
         `;
     }
 
-    // =====================================================
-    // ENVÍO DE DATOS HACIA GOOGLE SPREADSHEETS (CON SPINNER)
-    // =====================================================
+    // AJUSTADO: Envío idéntico a las necesidades del Script (Estructura JSON exacta)
     function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
+        const calleDestino = document.getElementById('evCalle').value.trim();
+        const numeroDestino = document.getElementById('evNumero').value.trim();
 
         if (!nombreVisitante) {
             alert("⚠️ Por favor escribe el nombre del visitante.");
@@ -457,18 +443,20 @@
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
-        const formData = new URLSearchParams();
-        formData.append("calleDestino", datosPaseActual.calle);
-        formData.append("numeroDestino", datosPaseActual.numero);
-        formData.append("nombreVisitante", nombreVisitante);
-        formData.append("fotoIne", fotosCapturadas.ine);
-        formData.append("fotoCarro", fotosCapturadas.carro || "");
+        // Estructura JSON que procesa tu "JSON.parse(e.postData.contents)"
+        const cuerpoDatos = {
+            fotoIne: { base64: fotosCapturadas.ine },
+            fotoCarro: fotosCapturadas.carro ? { base64: fotosCapturadas.carro } : null
+        };
 
-        fetch(WEB_APP_URL, {
+        // Tu script requiere p.calle, p.numero y p.nombre mediante los parámetros URL tradicionales
+        const urlConParametros = `${WEB_APP_URL}?calle=${encodeURIComponent(calleDestino)}&numero=${encodeURIComponent(numeroDestino)}&nombre=${encodeURIComponent(nombreVisitante)}`;
+
+        fetch(urlConParametros, {
             method: "POST",
             mode: "no-cors",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: formData.toString()
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(cuerpoDatos)
         })
         .then(() => {
             document.getElementById('loadingOverlay').style.display = 'none';
@@ -478,11 +466,10 @@
         .catch(err => {
             document.getElementById('loadingOverlay').style.display = 'none';
             console.error(err);
-            alert("Error al conectar con la base de datos, revise la señal del equipo.");
+            alert("Error al conectar con la base de datos.");
         });
     }
 
-    // Cierra cualquier panel activo y reactiva de forma automática la cámara trasera
     function regresarAlEscaner(forzarCamara) {
         document.getElementById('panelEvidencias').style.display = 'none';
         document.getElementById('panelResidente').style.display = 'none';
@@ -501,9 +488,6 @@
         }
     }
 
-    // =====================================================
-    // DETECCIÓN AUTOMÁTICA AL ABRIR EL ENLACE DIRECTO
-    // =====================================================
     function verificarDatosAlCargar() {
         if (window.location.search) {
             procesarUrlPase(window.location.href);
