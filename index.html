@@ -222,7 +222,8 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbysNDnhR4cWOiL16TWmTdivjKQmhkXpd1NhKVksi4kMrnxQG3TbjJS4X6ypfOs6y0WQ/exec";
+    // URL DE TU NUEVO APPS SCRIPT ENLAZADA CORRECTAMENTE
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz5flCudHVblch7oj3UHJKHHPsc2YxJp5k8I-HL2-60YaDGr6ShMiLV3w72-cC7zZa4/exec";
 
     let html5QrcodeScanner = null;
     let camarasDisponibles = [];
@@ -284,7 +285,7 @@
                 setTimeout(() => montarLente(cameraId), 300);
             });
         } else {
-            montarLente(cameraId);
+            montorLente(cameraId);
         }
     }
 
@@ -363,7 +364,7 @@
             
             const ahora = new Date();
             const fechaString = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const horaString = Pattern = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const horaString = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('resFechaHora').innerText = `${fechaString} a las ${horaString}`;
             
         } else {
@@ -446,6 +447,7 @@
 
         fetch(WEB_APP_URL, {
             method: "POST",
+            method: "POST",
             mode: "no-cors",
             headers: {
                 "Content-Type": "text/plain;charset=utf-8"
@@ -457,10 +459,8 @@
             
             alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
             
-            // MARCADOR DE REINICIO DE CÁMARA (Lógica Calle Aguilar 1151)
             localStorage.setItem('ejecutarCamaraAlCargar', 'true');
             
-            // Limpieza absoluta de la URL refrescando la sesión de forma nativa
             window.location.href = window.location.origin + window.location.pathname;
         })
         .catch(err => {
@@ -487,10 +487,9 @@
         if (window.location.search) {
             procesarUrlPase(window.location.href);
         } else {
-            // Evaluamos si venimos saliendo de guardar un registro exitoso
             const debeArrancarCamara = localStorage.getItem('ejecutarCamaraAlCargar');
             if (debeArrancarCamara === 'true') {
-                localStorage.removeItem('ejecutarCamaraAlCargar'); // Limpiamos la bandera
+                localStorage.removeItem('ejecutarCamaraAlCargar');
             }
             iniciarEscaner();
         }
