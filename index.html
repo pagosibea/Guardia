@@ -222,7 +222,6 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
-    // URL DE TU NUEVO APPS SCRIPT ENLAZADA CORRECTAMENTE
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz5flCudHVblch7oj3UHJKHHPsc2YxJp5k8I-HL2-60YaDGr6ShMiLV3w72-cC7zZa4/exec";
 
     let html5QrcodeScanner = null;
@@ -285,7 +284,7 @@
                 setTimeout(() => montarLente(cameraId), 300);
             });
         } else {
-            montorLente(cameraId);
+            montarLente(cameraId);
         }
     }
 
@@ -447,7 +446,6 @@
 
         fetch(WEB_APP_URL, {
             method: "POST",
-            method: "POST",
             mode: "no-cors",
             headers: {
                 "Content-Type": "text/plain;charset=utf-8"
@@ -456,11 +454,8 @@
         })
         .then(() => {
             document.getElementById('loadingOverlay').style.display = 'none';
-            
             alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
-            
             localStorage.setItem('ejecutarCamaraAlCargar', 'true');
-            
             window.location.href = window.location.origin + window.location.pathname;
         })
         .catch(err => {
