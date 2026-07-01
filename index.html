@@ -222,7 +222,7 @@
 <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display: none;">
 
 <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz5flCudHVblch7oj3UHJKHHPsc2YxJp5k8I-HL2-60YaDGr6ShMiLV3w72-cC7zZa4/exec";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwtoZXu6R1ZwdsG92eDfmqWtKv9VCpNbms0n8hbgDMRUrstIs5ng3In7y9dKpg27EdN-Q/exec";
 
     let html5QrcodeScanner = null;
     let camarasDisponibles = [];
@@ -420,9 +420,6 @@
         `;
     }
 
-    // =====================================================
-    // GUARDAR ENTRADA OPTIMIZADO (ENVÍO ASÍNCRONO ULTRA RÁPIDO)
-    // =====================================================
     function guardarEntradaCaseta() {
         const nombreVisitante = document.getElementById('evNombre').value.trim();
         const calleDestino = document.getElementById('evCalle').value.trim();
@@ -437,7 +434,8 @@
             return;
         }
 
-        // 1. Armamos el JSON completo con las fotos pesadas
+        document.getElementById('loadingOverlay').style.display = 'flex';
+
         const jsonCompleto = {
             calle: calleDestino,
             numero: numeroDestino,
@@ -446,18 +444,6 @@
             fotoCarro: fotosCapturadas.carro ? { base64: fotosCapturadas.carro } : null
         };
 
-        // 2. ENFOQUE OPTIMISTA: Avisamos de inmediato y limpiamos la pantalla del guardia (0 milisegundos de espera)
-        alert("🎉 ¡Entrada Registrada! Abriendo pluma. Las fotografías se procesarán en segundo plano.");
-        
-        // Regresamos al escáner por código sin refrescar la página completa para no tumbar la subida silenciosa
-        document.getElementById('panelEvidencias').style.display = 'none';
-        document.getElementById('panelResidente').style.display = 'none';
-        document.getElementById('wrapperEscaner').style.display = 'block';
-        document.getElementById('areaControlesCamara').style.display = 'none';
-        datosPaseActual = null;
-        iniciarEscaner();
-
-        // 3. El envío real se ejecuta en el fondo. El guardia ya puede atender al siguiente auto.
         fetch(WEB_APP_URL, {
             method: "POST",
             mode: "no-cors",
@@ -467,10 +453,15 @@
             body: JSON.stringify(jsonCompleto)
         })
         .then(() => {
-            console.log("🚀 Registro e imágenes enviadas con éxito a Google Sheets en segundo plano.");
+            document.getElementById('loadingOverlay').style.display = 'none';
+            alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
+            localStorage.setItem('ejecutarCamaraAlCargar', 'true');
+            window.location.href = window.location.origin + window.location.pathname;
         })
         .catch(err => {
-            console.error("❌ Error silencioso en el fondo al subir a Sheets:", err);
+            document.getElementById('loadingOverlay').style.display = 'none';
+            console.error(err);
+            alert("Error de conexión al enviar el registro.");
         });
     }
 
