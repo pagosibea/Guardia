@@ -153,7 +153,7 @@
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <div class="loading-text">GUARDANDO</div>
+    <div class="loading-text">GUARDANDO ENTRADA...</div>
 </div>
 
 <div class="container">
@@ -161,7 +161,7 @@
         <h2 id="tituloHeader">Caseta: Escáner IBEA</h2>
         
         <div class="cam-controls" id="areaControlesCamara" style="display: none;">
-            <button class="btn btn-secondary" style="padding: 8px; font-size: 13px; margin: 0;" onclick="alternarCamara()">🔄 Cambiar Lente Trasera</button>
+            <button class="btn btn-secondary" style="padding: 8px; font-size: 13px; margin: 0;" onclick="alternarCamara()">🔄 Cambiar Cámara</button>
         </div>
 
         <div id="reader"></div>
@@ -266,12 +266,12 @@
                 
                 encenderLente(camarasDisponibles[indiceCamaraActual].id);
             } else {
-                alert("No se detectaron cámaras en este dispositivo.");
+                alert("No se detectaron cámaras.");
                 document.getElementById('btnIniciar').style.display = 'block';
             }
         }).catch(err => {
-            console.error("Error al listar cámaras:", err);
-            alert("Error al acceder a los permisos de la cámara.");
+            console.error(err);
+            alert("Error de acceso a la cámara.");
             document.getElementById('btnIniciar').style.display = 'block';
         });
     }
@@ -296,10 +296,7 @@
             onScanSuccess,
             onScanFailure
         ).catch(err => {
-            console.error("Error al iniciar cámara seleccionada:", err);
-            setTimeout(() => {
-                 html5QrcodeScanner.start(cameraId, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure).catch(e => console.log("Fallo reintento"));
-            }, 500);
+            console.error(err);
         });
     }
 
@@ -325,7 +322,7 @@
 
     function procesarUrlPase(urlTexto) {
         if (!urlTexto.includes("?")) {
-            alert("❌ Código QR Inválido o desconocido.");
+            alert("❌ Código QR Inválido.");
             regresarAlEscaner(true);
             return;
         }
@@ -338,7 +335,7 @@
         const hash = urlParams.get("h");
 
         if (!calle || !numero || !hash) {
-            alert("❌ Datos de acceso corruptos o QR impreciso.");
+            alert("❌ Datos de acceso corruptos.");
             regresarAlEscaner(true);
             return;
         }
@@ -347,7 +344,7 @@
         const hashEsperado = btoa(stringFirma).replace(/=/g, "");
 
         if (hash !== hashEsperado) {
-            alert("🚨 ¡ALERTA! Código QR falsificado o firma de seguridad inválida.");
+            alert("🚨 Código QR inválido o firma incorrecta.");
             regresarAlEscaner(true);
             return;
         }
@@ -362,10 +359,7 @@
             document.getElementById('resDomicilio').innerText = `${calle} #${numero}`;
             
             const ahora = new Date();
-            const fechaString = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const horaString = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('resFechaHora').innerText = `${fechaString} a las ${horaString}`;
-            
+            document.getElementById('resFechaHora').innerText = ahora.toLocaleString('es-MX');
         } else {
             document.getElementById('wrapperEscaner').style.display = 'none';
             document.getElementById('panelEvidencias').style.display = 'block';
@@ -454,14 +448,14 @@
         })
         .then(() => {
             document.getElementById('loadingOverlay').style.display = 'none';
-            alert("🎉 ¡Entrada Guardada! El registro se ha enviado a la base de datos.");
+            alert("🎉 ¡Entrada Guardada con Éxito!");
             localStorage.setItem('ejecutarCamaraAlCargar', 'true');
             window.location.href = window.location.origin + window.location.pathname;
         })
         .catch(err => {
             document.getElementById('loadingOverlay').style.display = 'none';
             console.error(err);
-            alert("Error de conexión al enviar el registro.");
+            alert("Error de conexión.");
         });
     }
 
@@ -482,10 +476,6 @@
         if (window.location.search) {
             procesarUrlPase(window.location.href);
         } else {
-            const debeArrancarCamara = localStorage.getItem('ejecutarCamaraAlCargar');
-            if (debeArrancarCamara === 'true') {
-                localStorage.removeItem('ejecutarCamaraAlCargar');
-            }
             iniciarEscaner();
         }
     }
