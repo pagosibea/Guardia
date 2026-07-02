@@ -490,6 +490,10 @@ async function comprimirImagen(file) {
             alert("⚠️ Hace falta tomar la fotografía de la INE.");
             return;
         }
+        if (!fotosCapturadas.carro) {
+    alert("⚠️ Hace falta tomar la fotografía del vehículo o placas.");
+    return;
+}
 
         document.getElementById('loadingOverlay').style.display = 'flex';
 
