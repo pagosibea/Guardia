@@ -379,31 +379,94 @@
         btn.className = "btn btn-foto";
         btn.innerHTML = `<span>${textoOriginal}</span>`;
     }
+async function comprimirImagen(file) {
+    return new Promise((resolve) => {
 
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+
+            const img = new Image();
+
+            img.onload = function() {
+
+                const canvas = document.createElement("canvas");
+
+                const MAX = 1000;
+
+                let w = img.width;
+                let h = img.height;
+
+                if (w > h) {
+                    if (w > MAX) {
+                        h *= MAX / w;
+                        w = MAX;
+                    }
+                } else {
+                    if (h > MAX) {
+                        w *= MAX / h;
+                        h = MAX;
+                    }
+                }
+
+                canvas.width = w;
+                canvas.height = h;
+
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, w, h);
+
+                resolve(canvas.toDataURL("image/jpeg", 0.60));
+
+            };
+
+            img.src = e.target.result;
+
+        };
+
+        reader.readAsDataURL(file);
+
+    });
+}
     function capturarEvidencia(tipo) {
         tipoEvidenciaActual = tipo;
         document.getElementById('inputCamaraNativa').click();
     }
 
-    document.getElementById('inputCamaraNativa').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+   document.getElementById('inputCamaraNativa').addEventListener('change', async function(e) {
 
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const completeBase64 = event.target.result;
-            const base64String = completeBase64.split(',')[1];
-            
-            if (tipoEvidenciaActual === 'ine') {
-                fotosCapturadas.ine = base64String;
-                desplegarMiniatura('btnIne', completeBase64, "🪪 INE Capturada con Éxito ✅");
-            } else if (tipoEvidenciaActual === 'carro') {
-                fotosCapturadas.carro = base64String;
-                desplegarMiniatura('btnCarro', completeBase64, "🚗 Vehículo Capturado con Éxito ✅");
-            }
-        };
-        reader.readAsDataURL(file);
-    });
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const completeBase64 = await comprimirImagen(file);
+
+    const base64String = completeBase64.split(',')[1];
+
+    if (tipoEvidenciaActual === 'ine') {
+
+        fotosCapturadas.ine = base64String;
+
+        desplegarMiniatura(
+            'btnIne',
+            completeBase64,
+            "🪪 INE Capturada con Éxito ✅"
+        );
+
+    } else {
+
+        fotosCapturadas.carro = base64String;
+
+        desplegarMiniatura(
+            'btnCarro',
+            completeBase64,
+            "🚗 Vehículo Capturado con Éxito ✅"
+        );
+
+    }
+
+    e.target.value = "";
+
+});
 
     function desplegarMiniatura(btnId, imgSrc, textoStatus) {
         const btn = document.getElementById(btnId);
