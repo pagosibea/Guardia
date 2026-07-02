@@ -427,46 +427,42 @@ async function comprimirImagen(file) {
 
     });
 }
-    function capturarEvidencia(tipo) {
+   function capturarEvidencia(tipo) {
         tipoEvidenciaActual = tipo;
         document.getElementById('inputCamaraNativa').click();
     }
 
-   document.getElementById('inputCamaraNativa').addEventListener('change', async function(e) {
+    document.getElementById('inputCamaraNativa').addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    const file = e.target.files[0];
+        // Compresión de la imagen
+        const completeBase64 = await comprimirImagen(file);
+        const base64String = completeBase64.split(',')[1];
 
-    if (!file) return;
+        if (tipoEvidenciaActual === 'ine') {
+            fotosCapturadas.ine = base64String;
+            desplegarMiniatura(
+                'btnIne',
+                completeBase64,
+                "🪪 INE Capturada con Éxito ✅"
+            );
+        } 
+        else if (tipoEvidenciaActual === 'carro') {
+            fotosCapturadas.carro = base64String;
+            desplegarMiniatura(
+                'btnCarro',
+                completeBase64,
+                "🚗 Vehículo Capturado con Éxito ✅"
+            );
+        } 
+        else {
+            console.warn("Tipo de evidencia desconocido:", tipoEvidenciaActual);
+        }
 
-    const completeBase64 = await comprimirImagen(file);
-
-    const base64String = completeBase64.split(',')[1];
-
-    if (tipoEvidenciaActual === 'ine') {
-
-        fotosCapturadas.ine = base64String;
-
-        desplegarMiniatura(
-            'btnIne',
-            completeBase64,
-            "🪪 INE Capturada con Éxito ✅"
-        );
-
-    } else {
-
-        fotosCapturadas.carro = base64String;
-
-        desplegarMiniatura(
-            'btnCarro',
-            completeBase64,
-            "🚗 Vehículo Capturado con Éxito ✅"
-        );
-
-    }
-
-    e.target.value = "";
-
-});
+        // Limpiar el input para permitir capturas consecutivas
+        e.target.value = "";
+    });
 
     function desplegarMiniatura(btnId, imgSrc, textoStatus) {
         const btn = document.getElementById(btnId);
