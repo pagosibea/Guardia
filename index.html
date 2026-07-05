@@ -223,7 +223,8 @@
 
 <script>
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwtoZXu6R1ZwdsG92eDfmqWtKv9VCpNbms0n8hbgDMRUrstIs5ng3In7y9dKpg27EdN-Q/exec";
-
+    const WEB_APP_RESIDENTES = "https://script.google.com/macros/s/AKfycbxu8B5nh6OEutQlFWrAQWHLIxm3j3c00Oh5xXVtg0oZ-jbr2pvgGPu0EHf1ixMaqnnP/exec";
+    
     let html5QrcodeScanner = null;
     let camarasDisponibles = [];
     let indiceCamaraActual = 0;
@@ -333,6 +334,7 @@
         const calle = urlParams.get("c");
         const numero = urlParams.get("num");
         const hash = urlParams.get("h");
+        const idQR = urlParams.get("id");
 
         if (!calle || !numero || !hash) {
             alert("❌ Datos de acceso corruptos.");
@@ -349,7 +351,13 @@
             return;
         }
 
-        datosPaseActual = { tipo, nombre, calle, numero };
+       datosPaseActual = {
+    tipo,
+    nombre,
+    calle,
+    numero,
+    idQR
+};
 
         if (tipo === 'r') {
             document.getElementById('wrapperEscaner').style.display = 'none';
