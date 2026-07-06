@@ -359,15 +359,48 @@
     idQR
 };
 
-        if (tipo === 'r') {
-            document.getElementById('wrapperEscaner').style.display = 'none';
-            document.getElementById('panelResidente').style.display = 'block';
-            
-            document.getElementById('resNombre').innerText = nombre ? decodeURIComponent(nombre) : "PROPIETARIO REGISTRADO";
-            document.getElementById('resDomicilio').innerText = `${calle} #${numero}`;
-            
-            const ahora = new Date();
-            document.getElementById('resFechaHora').innerText = ahora.toLocaleString('es-MX');
+       if (tipo === 'r') {
+
+    fetch(WEB_APP_RESIDENTES, {
+        method: "POST",
+        body: JSON.stringify({
+            accion: "consultarQR",
+            idQR: idQR
+        })
+    })
+    .then(r => r.json())
+    .then(respuesta => {
+
+        if (!respuesta.ok) {
+            alert(respuesta.mensaje);
+            regresarAlEscaner(true);
+            return;
+        }
+
+        datosPaseActual = {
+            tipo,
+            nombre: respuesta.nombre,
+            calle: respuesta.calle,
+            numero: respuesta.numero,
+            idQR
+        };
+
+        document.getElementById('wrapperEscaner').style.display = 'none';
+        document.getElementById('panelResidente').style.display = 'block';
+
+        document.getElementById('resNombre').innerText = respuesta.nombre;
+        document.getElementById('resDomicilio').innerText =
+            `${respuesta.calle} #${respuesta.numero}`;
+
+        const ahora = new Date();
+        document.getElementById('resFechaHora').innerText =
+            ahora.toLocaleString('es-MX');
+
+    });
+
+    return;
+
+}
         } else {
             document.getElementById('wrapperEscaner').style.display = 'none';
             document.getElementById('panelEvidencias').style.display = 'block';
@@ -380,7 +413,6 @@
             removerMiniatura('btnIne', "🪪 Tomar Foto de la INE");
             removerMiniatura('btnCarro', "🚗 Tomar Foto del Carro / Placas");
         }
-    }
 
     function removerMiniatura(btnId, textoOriginal) {
         const btn = document.getElementById(btnId);
