@@ -393,6 +393,7 @@
     numero: respuesta.numero,
     estatus: respuesta.estatus
 };
+        actualizarBotonResidente();
 
         document.getElementById('wrapperEscaner').style.display = 'none';
         document.getElementById('panelResidente').style.display = 'block';
@@ -591,7 +592,140 @@ async function comprimirImagen(file) {
             iniciarEscaner();
         }
     }
+function actualizarBotonResidente() {
 
+    const btn = document.getElementById("btnAccionResidente");
+
+    if (datosPaseActual.estatus === "GENERADO") {
+
+        btn.innerText = "REGISTRAR ENTRADA";
+        return;
+
+    }
+
+    if (datosPaseActual.estatus === "DENTRO") {
+
+        btn.innerText = "REGISTRAR SALIDA";
+        return;
+
+    }
+
+    if (datosPaseActual.estatus === "FUERA") {
+
+        btn.innerText = "QR UTILIZADO";
+        btn.disabled = true;
+        return;
+
+    }
+
+}
+        function accionResidente() {
+
+    if (!datosPaseActual) return;
+
+    if (datosPaseActual.estatus === "GENERADO") {
+
+        registrarEntrada();
+        return;
+
+    }
+
+    if (datosPaseActual.estatus === "DENTRO") {
+
+        registrarSalida();
+        return;
+
+    }
+
+    alert("Este QR ya fue utilizado.");
+
+    regresarAlEscaner(true);
+
+}
+        function registrarEntrada() {
+
+    fetch(WEB_APP_RESIDENTES, {
+
+        method: "POST",
+
+        body: JSON.stringify({
+
+            accion: "registrarEntrada",
+            idQR: datosPaseActual.idQR
+
+        })
+
+    })
+
+    .then(r => r.json())
+
+    .then(respuesta => {
+
+        if (!respuesta.ok) {
+
+            alert(respuesta.mensaje);
+            regresarAlEscaner(true);
+            return;
+
+        }
+
+        alert("✅ Entrada registrada correctamente.");
+
+        regresarAlEscaner(true);
+
+    })
+
+    .catch(error => {
+
+        console.error(error);
+
+        alert("Error registrando la entrada.");
+
+    });
+
+}
+        function registrarSalida() {
+
+    fetch(WEB_APP_RESIDENTES, {
+
+        method: "POST",
+
+        body: JSON.stringify({
+
+            accion: "registrarSalida",
+            idQR: datosPaseActual.idQR
+
+        })
+
+    })
+
+    .then(r => r.json())
+
+    .then(respuesta => {
+
+        if (!respuesta.ok) {
+
+            alert(respuesta.mensaje);
+            regresarAlEscaner(true);
+            return;
+
+        }
+
+        alert("✅ Salida registrada correctamente.");
+
+        regresarAlEscaner(true);
+
+    })
+
+    .catch(error => {
+
+        console.error(error);
+
+        alert("Error registrando la salida.");
+
+    });
+
+}
     window.addEventListener('DOMContentLoaded', verificarDatosAlCargar);
 </script>
 
