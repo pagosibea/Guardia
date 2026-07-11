@@ -147,8 +147,7 @@
         .residente-info-row:last-child { margin-bottom: 0; }
         .residente-label { font-size: 12px; color: #a7f3d0; display: block; font-weight: 600; text-transform: uppercase; }
         .residente-val { font-size: 16px; color: #ffffff; font-weight: bold; }
-    </style>
-    .qr-usado{
+   .qr-usado{
     background:#dc2626 !important;
     border:2px solid #991b1b !important;
 }
@@ -161,6 +160,8 @@
     background:#ffffff;
     color:#dc2626;
 }
+    </style>
+    
 </head>
 <body>
 
@@ -412,14 +413,6 @@
         document.getElementById('wrapperEscaner').style.display = 'none';
         document.getElementById('panelResidente').style.display = 'block';
 
-        document.getElementById('resNombre').innerText = respuesta.nombre;
-        document.getElementById('resDomicilio').innerText =
-            `${respuesta.calle} #${respuesta.numero}`;
-
-        const ahora = new Date();
-        document.getElementById('resFechaHora').innerText =
-            ahora.toLocaleString('es-MX');
-
     });
 
     return;
@@ -610,57 +603,82 @@ async function comprimirImagen(file) {
         console.log("datosPaseActual:", datosPaseActual);
 console.log("Botón:", document.getElementById("btnAccionResidente"));
         
-function actualizarBotonResidente() {
-
-    const btn = document.getElementById("btnAccionResidente");
-
-    if (datosPaseActual.estatus === "GENERADO") {
-
-        document.querySelector(".tarjeta-acceso").classList.remove("qr-usado");
-
-        document.getElementById("tituloAcceso").innerText = "ACCESO AUTORIZADO";
-        document.getElementById("resNombre").innerText = datosPaseActual.nombre;
+    function actualizarBotonResidente() {
+    
+        const btn = document.getElementById("btnAccionResidente");
+    
+        if (datosPaseActual.estatus === "GENERADO") {
+    
+            document.querySelector(".residente-label").innerText = "Propietario / Residente";
+    document.querySelectorAll(".residente-label")[1].style.display = "block";
+    document.querySelectorAll(".residente-label")[2].style.display = "block";
+    document.getElementById("resFechaHora").style.display = "block";
+    document.querySelector(".badge-verificado").innerText = "✓ RESIDENTE ACTIVO";
+    
+            document.querySelector(".tarjeta-acceso").classList.remove("qr-usado");
+    
+            document.getElementById("tituloAcceso").innerText = "ACCESO AUTORIZADO";
+            document.getElementById("resNombre").innerText = datosPaseActual.nombre;
+            document.getElementById("resDomicilio").innerText =
+                `${datosPaseActual.calle} #${datosPaseActual.numero}`;
+    
+            btn.innerText = "REGISTRAR ENTRADA";
+            btn.disabled = false;
+            btn.className = "btn btn-success";
+    btn.style.background = "#ffffff";
+    btn.style.color = "#064e3b";
+            return;
+        }
+    
+        if (datosPaseActual.estatus === "DENTRO") {
+    
+            document.querySelector(".residente-label").innerText = "Propietario / Residente";
+    document.querySelectorAll(".residente-label")[1].style.display = "block";
+    document.querySelectorAll(".residente-label")[2].style.display = "block";
+    document.getElementById("resFechaHora").style.display = "block";
+    document.querySelector(".badge-verificado").innerText = "✓ RESIDENTE ACTIVO";
+    
+            document.querySelector(".tarjeta-acceso").classList.remove("qr-usado");
+    
+            document.getElementById("tituloAcceso").innerText = "ACCESO AUTORIZADO";
+            document.getElementById("resNombre").innerText = datosPaseActual.nombre;
+            document.getElementById("resDomicilio").innerText =
+                `${datosPaseActual.calle} #${datosPaseActual.numero}`;
+    
+            btn.innerText = "REGISTRAR SALIDA";
+            btn.disabled = false;
+            btn.className = "btn btn-success";
+    btn.style.background = "#ffffff";
+    btn.style.color = "#064e3b";
+            return;
+        }
+    
+        if (datosPaseActual.estatus === "FUERA") {
+    
+            document.querySelector(".residente-label").innerText = "AVISO";
+    document.querySelectorAll(".residente-label")[1].style.display = "none";
+    document.querySelectorAll(".residente-label")[2].style.display = "none";
+            document.getElementById("resFechaHora").style.display = "none";
+        document.querySelector(".tarjeta-acceso").classList.add("qr-usado");
+    
+        document.getElementById("tituloAcceso").innerText = "QR NO VÁLIDO";
+    
+        document.querySelector(".badge-verificado").innerText = "✖ QR UTILIZADO";
+    
+        document.getElementById("resNombre").innerText =
+            "Este QR ya fue utilizado.";
+    
         document.getElementById("resDomicilio").innerText =
-            `${datosPaseActual.calle} #${datosPaseActual.numero}`;
-
-        btn.innerText = "REGISTRAR ENTRADA";
-        btn.disabled = false;
-        return;
-    }
-
-    if (datosPaseActual.estatus === "DENTRO") {
-
-        document.querySelector(".tarjeta-acceso").classList.remove("qr-usado");
-
-        document.getElementById("tituloAcceso").innerText = "ACCESO AUTORIZADO";
-        document.getElementById("resNombre").innerText = datosPaseActual.nombre;
-        document.getElementById("resDomicilio").innerText =
-            `${datosPaseActual.calle} #${datosPaseActual.numero}`;
-
-        btn.innerText = "REGISTRAR SALIDA";
-        btn.disabled = false;
-        return;
-    }
-
-    if (datosPaseActual.estatus === "FUERA") {
-
-    document.querySelector(".tarjeta-acceso").classList.add("qr-usado");
-
-    document.getElementById("tituloAcceso").innerText = "QR NO VÁLIDO";
-
-    document.querySelector(".badge-verificado").innerText = "✖ QR UTILIZADO";
-
-    document.getElementById("resNombre").innerText =
-        "Este QR ya fue utilizado.";
-
-    document.getElementById("resDomicilio").innerText =
-        "Genere un nuevo código QR para ingresar.";
-
-    document.getElementById("resFechaHora").innerText = "";
-
-    btn.innerText = "NUEVO REGISTRO";
+            "Genere un nuevo código QR para ingresar.";
+    
+        document.getElementById("resFechaHora").innerText = "";
+    
+        btn.innerText = "🔄 NUEVO REGISTRO";
     btn.disabled = false;
-
+btn.className = "btn btn-primary";
+btn.style.background = "#2563eb";
+btn.style.color = "#ffffff";
+        
     return;
 }
 
