@@ -318,8 +318,6 @@
     function onScanSuccess(decodedText, decodedResult) {
         try {
             html5QrcodeScanner.stop().then(() => {
-                html5QrcodeScanner.clear().then(() => {
-
         html5QrcodeScanner = null;
                 setTimeout(() => { procesarUrlPase(decodedText); }, 200);
             }).catch(() => {
