@@ -148,6 +148,19 @@
         .residente-label { font-size: 12px; color: #a7f3d0; display: block; font-weight: 600; text-transform: uppercase; }
         .residente-val { font-size: 16px; color: #ffffff; font-weight: bold; }
     </style>
+    .qr-usado{
+    background:#dc2626 !important;
+    border:2px solid #991b1b !important;
+}
+
+.qr-usado .residente-info-card{
+    background:#7f1d1d !important;
+}
+
+.qr-usado .badge-verificado{
+    background:#ffffff;
+    color:#dc2626;
+}
 </head>
 <body>
 
@@ -168,9 +181,9 @@
         <button id="btnIniciar" class="btn btn-primary" style="display: none;" onclick="iniciarEscaner()">Activar Cámara de Caseta</button>
     </div>
 
-    <div id="panelResidente" class="panel-residente" style="display: none;">
-        <h3>ACCESO AUTORIZADO</h3>
-        <div class="badge-verificado">✓ RESIDENTE ACTIVO</div>
+<div id="panelResidente" class="panel-residente tarjeta-acceso" style="display: none;">
+<h3 id="tituloAcceso">ACCESO AUTORIZADO</h3>
+    <div class="badge-verificado">✓ RESIDENTE ACTIVO</div>
         
         <div class="residente-info-card">
             <div class="residente-info-row">
@@ -631,21 +644,25 @@ function actualizarBotonResidente() {
 
     if (datosPaseActual.estatus === "FUERA") {
 
-        document.querySelector(".tarjeta-acceso").classList.add("qr-usado");
+    document.querySelector(".tarjeta-acceso").classList.add("qr-usado");
 
-        document.getElementById("tituloAcceso").innerText = "QR NO VÁLIDO";
+    document.getElementById("tituloAcceso").innerText = "QR NO VÁLIDO";
 
-        document.getElementById("resNombre").innerText =
-            "Este QR ya fue utilizado.";
+    document.querySelector(".badge-verificado").innerText = "✖ QR UTILIZADO";
 
-        document.getElementById("resDomicilio").innerText =
-            "Solicite generar un nuevo código QR.";
+    document.getElementById("resNombre").innerText =
+        "Este QR ya fue utilizado.";
 
-        btn.innerText = "NUEVO REGISTRO";
-        btn.disabled = false;
+    document.getElementById("resDomicilio").innerText =
+        "Genere un nuevo código QR para ingresar.";
 
-        return;
-    }
+    document.getElementById("resFechaHora").innerText = "";
+
+    btn.innerText = "NUEVO REGISTRO";
+    btn.disabled = false;
+
+    return;
+}
 
 }
         function accionResidente() {
