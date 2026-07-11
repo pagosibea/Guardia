@@ -603,24 +603,48 @@ function actualizarBotonResidente() {
 
     if (datosPaseActual.estatus === "GENERADO") {
 
-        btn.innerText = "REGISTRAR ENTRADA";
-        return;
+        document.querySelector(".tarjeta-acceso").classList.remove("qr-usado");
 
+        document.getElementById("tituloAcceso").innerText = "ACCESO AUTORIZADO";
+        document.getElementById("resNombre").innerText = datosPaseActual.nombre;
+        document.getElementById("resDomicilio").innerText =
+            `${datosPaseActual.calle} #${datosPaseActual.numero}`;
+
+        btn.innerText = "REGISTRAR ENTRADA";
+        btn.disabled = false;
+        return;
     }
 
     if (datosPaseActual.estatus === "DENTRO") {
 
-        btn.innerText = "REGISTRAR SALIDA";
-        return;
+        document.querySelector(".tarjeta-acceso").classList.remove("qr-usado");
 
+        document.getElementById("tituloAcceso").innerText = "ACCESO AUTORIZADO";
+        document.getElementById("resNombre").innerText = datosPaseActual.nombre;
+        document.getElementById("resDomicilio").innerText =
+            `${datosPaseActual.calle} #${datosPaseActual.numero}`;
+
+        btn.innerText = "REGISTRAR SALIDA";
+        btn.disabled = false;
+        return;
     }
 
     if (datosPaseActual.estatus === "FUERA") {
 
-        btn.innerText = "QR UTILIZADO";
-        btn.disabled = true;
-        return;
+        document.querySelector(".tarjeta-acceso").classList.add("qr-usado");
 
+        document.getElementById("tituloAcceso").innerText = "QR NO VÁLIDO";
+
+        document.getElementById("resNombre").innerText =
+            "Este QR ya fue utilizado.";
+
+        document.getElementById("resDomicilio").innerText =
+            "Solicite generar un nuevo código QR.";
+
+        btn.innerText = "NUEVO REGISTRO";
+        btn.disabled = false;
+
+        return;
     }
 
 }
